@@ -412,7 +412,7 @@ class FYFGame(arcade.Window):
         self.n_player = None
         self.self_player_index = None
 
-        self._lock = threading.Lock()
+        #self._lock = threading.Lock()
 
         # List of cards we are dragging with the mouse
         self.held_cards = None
@@ -506,20 +506,6 @@ class FYFGame(arcade.Window):
 
         #print(self.card_pile_list[0].to_code())
 
-    @property
-    def card_status(self):
-        #print("cs")
-        with self._lock:
-            return dict(
-                player_index = self.self_player_index,
-                cards_in_pile = {pile.card_pile_index: pile.to_valuelist() for pile in self.card_pile_list}# if pile.to_server_type ==COM_TO_SERVER_SYNC}
-                #card_in_hand = {self.self_player_index: self.card_pile_list[0].to_valuelist()},
-                #output_pile = {pindex: self.card_pile_list[pindex+1].to_valuelist() for pindex in range(0, self.n_player) if self.card_pile_list[pindex+1].to_server_type ==COM_TO_SERVER_SYNC},
-                #score_pile = {pindex:self.card_pile_list[pindex+1+self.n_player].to_valuelist() for pindex in range(0, self.n_player) if self.card_pile_list[pindex+1+self.n_player].to_server_type ==COM_TO_SERVER_SYNC},
-            )
-
-
-
     def update_game_state(self, gs_dict):
         self.game_state = GameState(**gs_dict)
 
@@ -543,16 +529,16 @@ class FYFGame(arcade.Window):
         """ Render the screen. """
         #(".")
         # Clear the screen
-        with self._lock:
-            arcade.start_render()
+        #with self._lock:
+        arcade.start_render()
 
-            # Draw the mats the cards go on to
-            self.pile_mat_list.draw()
+        # Draw the mats the cards go on to
+        self.pile_mat_list.draw()
 
-            # Draw the cards
+        # Draw the cards
 
-            for card_pile in self.card_pile_list[::-1]:
-                card_pile.draw()
+        for card_pile in self.card_pile_list[::-1]:
+            card_pile.draw()
 
     # def on_key_press(self, symbol: int, modifiers: int):
     #     """ User presses key """
@@ -580,20 +566,20 @@ class FYFGame(arcade.Window):
 
     def on_mouse_press(self, x, y, button, key_modifiers):
         """ Called when the user presses a mouse button. """
-        with self._lock:
-            c_mats = arcade.get_sprites_at_point((x, y), self.pile_mat_list)
-            if len(c_mats)>0:
-                pile_index = c_mats[0].index
-                #if self.card_pile_list[pile_index].can_remove_card:
-                cards = arcade.get_sprites_at_point((x, y), self.card_pile_list[pile_index])
-                if len(cards) > 0:
-                    primary_card = cards[-1]
 
-                    self.held_cards = [primary_card]
-                    self.held_cards_original_position = [self.held_cards[0].position]
+        c_mats = arcade.get_sprites_at_point((x, y), self.pile_mat_list)
+        if len(c_mats)>0:
+            pile_index = c_mats[0].index
+            #if self.card_pile_list[pile_index].can_remove_card:
+            cards = arcade.get_sprites_at_point((x, y), self.card_pile_list[pile_index])
+            if len(cards) > 0:
+                primary_card = cards[-1]
 
-            elif button == arcade.MOUSE_BUTTON_RIGHT:
-                pass
+                self.held_cards = [primary_card]
+                self.held_cards_original_position = [self.held_cards[0].position]
+
+        elif button == arcade.MOUSE_BUTTON_RIGHT:
+            # change
 
     #def remove_card_from_pile(self, card):
     #    """ Remove card from whatever pile it was in. """
@@ -644,24 +630,24 @@ class FYFGame(arcade.Window):
 
             #  Is it the same pile we came from?
             #print("rl")
-            with self._lock:
-                old_pile_index = self.get_pile_index_for_card(self.held_cards[0])
-                if new_pile_index == old_pile_index:
-                    # If so, who cares. We'll just reset our position.
-                    pass
-                else:
-                    self.move_cards(self.held_cards, new_pile_index)
-                    # Success, don't reset position of cards
-                    reset_position = False
+            #with self._lock:
+            old_pile_index = self.get_pile_index_for_card(self.held_cards[0])
+            if new_pile_index == old_pile_index:
+                # If so, who cares. We'll just reset our position.
+                pass
+            else:
+                self.move_cards(self.held_cards, new_pile_index)
+                # Success, don't reset position of cards
+                reset_position = False
 
 
 
         if reset_position:
             # Where-ever we were dropped, it wasn't valid. Reset the each card's position
             # to its original spot.
-            with self._lock:
-                for card_index, card in enumerate(self.held_cards):
-                    card.position = self.held_cards_original_position[card_index]
+            #with self._lock:
+            for card_index, card in enumerate(self.held_cards):
+                card.position = self.held_cards_original_position[card_index]
 
         # We are no longer holding cards
         self.held_cards = []
