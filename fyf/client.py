@@ -661,22 +661,6 @@ class FYFGame(arcade.Window):
             card.center_x += dx
             card.center_y += dy
 
-class ZMQ_Thread_Pusher():
-    def __init__(self, dst_url):
-
-        self.ctx = Context()
-        self.push_sock = self.ctx.socket(zmq.PUSH)
-        self.push_sock.connect(dst_url)
-
-    def __del__(self):
-        self.push_sock.close(1)
-        self.ctx.destroy(linger=1)
-
-    def push(self, event_dict):
-        msg = dict(counter=1, event=event_dict)
-        self.push_sock.send_json(msg)
-
-
 def thread_pusher(window: FYFGame):
     ctx = Context()
     push_sock: Socket = ctx.socket(zmq.PUSH)
