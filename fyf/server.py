@@ -7,26 +7,7 @@ import json
 import zmq
 from zmq.asyncio import Context, Socket
 
-
-@dataclass
-class GameState:
-     cards_in_pile: Dict[int, List[int]]
-
-     def update(self, event):
-         for key, value in event['cards_in_pile'].items():
-             self.cards_in_pile[int(key)] = value
-
-     def to_json(self):
-         d = dict(
-             cards_in_pile=self.cards_in_pile,
-         )
-         return json.dumps(d)
-
-     #def from_json(self, data):
-     #    d = json.loads(data)
-     #    for key, value in d['cards_in_pile']:
-     #        self.cards_in_pile[int(key)] = [int(w) for w in value]
-
+from gameutil import GameState, Event
 
 SERVER_UPDATE_TICK_HZ = 10
 
@@ -37,9 +18,12 @@ async def update_from_client(gs: GameState, sock: Socket):
             msg = await sock.recv_json()
             counter = msg['counter']
             event_dict = msg['event']
-
+            print(msg)
+            #print(event_dict)
             # update game sate
-            gs.update(event_dict)
+            print({key: val for key, val in gs.cards_in_pile.items() if key != 0})
+            gs.update_from_event(Event(**event_dict))
+            print('***')
             #print(gs)
             # event_dict = await sock.recv_json()
             #print(f'Got event dict: {event_dict}')
@@ -51,7 +35,14 @@ async def ticker(sock1, sock2):
 
     # A task to receive keyboard and mouse inputs from players.
     # This will also update the game state, gs.
-    gs = GameState(cards_in_pile=dict())
+    gs = GameState(n_pile=0,
+                   cards_in_pile={0:list(zip(list(range(108)), ['U']*108)),
+                                  6:[], 7:[], 8:[], 9:[], 10:[], 11:[], 12:[], 13:[], 14:[], 15:[], 16:[], 17:[], 18:[], 19:[], 20:[], 21:[], 22:[], 23:[]
+                                  },
+                   n_player=8,
+                   player_assignment={0:'test'},
+                   status='G'
+                   )
     t = create_task(update_from_client(gs, sock2))
 
     # Send out the game state to all players 60 times per second.
@@ -94,3 +85,5 @@ async def main():
 
 if __name__ == '__main__':
     run(main())
+
+
