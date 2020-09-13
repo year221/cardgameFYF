@@ -62,7 +62,7 @@ STARTING_X = MAT_WIDTH * HORIZONTAL_MARGIN_PERCENT
 
 TOP_OUTPUT_ROW_Y = (SCREEN_HEIGHT * 10.5) // 12
 BOTTOM_OUTPUT_ROW_Y = (SCREEN_HEIGHT * 4.5) // 12
-
+MID_CARD_Y = (SCREEN_HEIGHT * 7.5)//12
 TOP_SCORE_ROW_Y = (SCREEN_HEIGHT * 9) // 12
 BOTTOM_SCORE_ROW_Y = (SCREEN_HEIGHT * 6) // 12
 
@@ -180,7 +180,7 @@ class Card(arcade.Sprite):
         return 'U' if self._is_face_up else 'D'
     @face.setter
     def face(self, x):
-        if x=='U':
+        if x == 'U':
             self.face_up()
         else:
             self.face_down()
@@ -199,9 +199,10 @@ class Card(arcade.Sprite):
             self.face_down()
 
 
-    def code_face_flipped(self):
-        return self.value, 'D' if self._is_face_up else 'U'
-
+    #def code_face_flipped(self):
+    #    return self.value, 'D' if self._is_face_up else 'U'
+    def face_flipped(self):
+        return 'D' if self._is_face_up else 'U'
 
     @property
     def active(self):
@@ -318,9 +319,14 @@ class CardPile(arcade.SpriteList):
         self.card_scale = card_scale
         #self.to_server_type=to_server_type
         #self.from_server_type=from_server_type
-        self._cached_codes = []
+        #self._cached_codes = []
         self._cached_values = []
         self._cached_face_status = {}
+    def reset(self):
+        self._cached_values = []
+        self._cached_face_status = {}
+        while self.__len__() > 0:
+            self.pop()
 
     def add_card(self, card):
         """ add card """
@@ -353,7 +359,9 @@ class CardPile(arcade.SpriteList):
 
     def remove_card(self, card):
         self.remove(card)
-        self._cached_codes.remove(card.code)
+        self._cached_values.remove(card.value)
+        self._cached_face_status.pop(card.value)
+        #self._cached_codes.remove(card.code)
 
 
     def from_value_face(self, value_list, face_status_dict):
@@ -361,6 +369,7 @@ class CardPile(arcade.SpriteList):
         #code_list = [tuple(w) for w in code_list]
         cards_to_remove = set(self._cached_values) - set(value_list)
         cards_to_add = set(value_list) - set(self._cached_values)
+
         cards_to_flip = dict(set(self._cached_face_status.items())-set(face_status_dict.items()))#[key for key, val in self._cached_face_status if (key in face_status_dict) and face_status_dict[key]!=val]
 
         if cards_to_remove or cards_to_flip or cards_to_add:
@@ -375,7 +384,7 @@ class CardPile(arcade.SpriteList):
             if cards_to_flip:
                 cards_to_flip = [card for card in self if card.value in cards_to_flip.keys()]
                 for card in cards_to_flip:
-                    card.flip_face()
+                    card.face = face_status_dict[card.value]
 
             if cards_to_add:
                 for value in cards_to_add:
@@ -451,13 +460,15 @@ GAME_STATUS_ONGOING = 0
 class FYFGame(arcade.Window):
     """ Main application class. """
 
-    def __init__(self):
+    def __init__(self, n_player=6, n_decks=6, n_residual_card=6):
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
 
         arcade.set_background_color(arcade.color.AMAZON)
         self.n_player = None
         self.self_player_index = None
-
+        self.n_decks = None
+        self.n_residual_card = None
+        self.n_pile= None
         #self._lock = threading.Lock()
 
         # List of cards we are dragging with the mouse
@@ -474,10 +485,18 @@ class FYFGame(arcade.Window):
         self.event_buffer = []
         self.game_state = None
 
-    def setup(self, n_player = 6, player_index=1):
+    def reset_all_piles(self):
+        for card_pile in self.card_pile_list:
+            card_pile.reset()
+
+    def setup(self, n_player = 6, player_index=1, n_decks=6, n_residual_card=6):
         """ Set up the game here. Call this function to restart the game. """
+
         self.n_player = n_player
+        self.n_pile = self.n_player *3+1
         self.self_player_index = player_index
+        self.n_decks=n_decks
+        self.n_residual_card=n_residual_card
         # List of cards we are dragging with the mouse
         self.held_cards = []
         self.held_cards_original_position=[]
@@ -548,6 +567,20 @@ class FYFGame(arcade.Window):
                 )
             )
 
+        pile = Mat(len(self.card_pile_list), int(MAT_WIDTH*0.5), int(MAT_HEIGHT*0.3), arcade.csscolor.DARK_SLATE_BLUE)
+        pile.position = MAT_WIDTH//2, MID_CARD_Y
+        self.pile_mat_list.append(pile)
+        self.card_pile_list.append(
+            CardPile(
+                card_pile_index=self.n_player*3,
+                mat_center=(MAT_WIDTH//2, MID_CARD_Y),
+                mat_size=(int(MAT_WIDTH * 0.5), int(MAT_HEIGHT * SCORE_MAT_SCALE)),
+                mat_boundary=(int(CARD_WIDTH * SCORE_MAT_SCALE/2), int(CARD_HEIGHT * SCORE_MAT_SCALE/2)),
+                card_scale =SCORE_MAT_SCALE,
+                card_offset=(int(CARD_WIDTH * SCORE_MAT_SCALE * CARD_OFFSET_PCT),
+                             int(CARD_HEIGHT * SCORE_MAT_SCALE * CARD_OFFSET_PCT))
+            )
+        )
         #self.card_pile_list[0].from_code(sort_card_codes(list(zip(list(range(108)), ['U']*108))))
 
         #print(self.card_pile_list[0].to_code())
@@ -565,11 +598,17 @@ class FYFGame(arcade.Window):
         #print(self.game_state)
         if self.game_state:
             #print(self.game_state.cards_in_pile.keys())
+            if self.game_state.status=='New Game':
+
+                self.game_state.status='Game'
+                self.reset_all_piles()
+            #print(self.game_state.status)
+
             for w in self.card_pile_list:
                 #if w.from_server_type==COM_FROM_SERVER_UPDATE:
                 if (w.card_pile_index) in self.game_state.cards_in_pile:
                     #print(self.game_state.cards_in_pile[(w.card_pile_index)])
-                    w.from_value_face(self.game_state.cards_in_pile[(w.card_pile_index)], self.game_state.cards_status)
+                    w.from_value_face(self.game_state.cards_in_pile[w.card_pile_index], self.game_state.cards_status)
 
                     #w.from_code(self.game_state.cards_in_pile[(w.card_pile_index)])
 
@@ -588,11 +627,11 @@ class FYFGame(arcade.Window):
         for card_pile in self.card_pile_list[::-1]:
             card_pile.draw()
 
-    # def on_key_press(self, symbol: int, modifiers: int):
-    #     """ User presses key """
-    #     if symbol == arcade.key.R:
-    #         # Restart
-    #         self.setup()
+    def on_key_press(self, symbol: int, modifiers: int):
+         """ User presses key """
+         if symbol == arcade.key.R:
+             if modifiers & arcade.key.MOD_CTRL:
+                self.initiate_game_restart()
 
     def get_pile_index_for_card(self, card):
         """ What pile is this card in? """
@@ -601,16 +640,6 @@ class FYFGame(arcade.Window):
             if card in pile:
                 return index
 
-
-    # def pull_to_top(self, card):
-    #     """ Pull card to top of rendering order (last to render, looks on-top) """
-    #     # Find the index of the card
-    #     index = self.card_list.index(card)
-    #     # Loop and pull all the other cards down towards the zero end
-    #     for i in range(index, len(self.card_list) - 1):
-    #         self.card_list[i] = self.card_list[i + 1]
-    #     # Put this card at the right-side/top/size of list
-    #     self.card_list[len(self.card_list) - 1] = card
 
     def on_mouse_press(self, x, y, button, key_modifiers):
         """ Called when the user presses a mouse button. """
@@ -645,30 +674,41 @@ class FYFGame(arcade.Window):
     def move_cards(self, cards, new_pile_index):
         old_pile_index = self.get_pile_index_for_card(cards[0])
 
-        #for i, dropped_card in enumerate(cards):
-        #    self.card_pile_list[new_pile_index].add_card(dropped_card)
-        #    self.card_pile_list[old_pile_index].remove_card(dropped_card)
+        for i, dropped_card in enumerate(cards):
+            self.card_pile_list[new_pile_index].add_card(dropped_card)
+            self.card_pile_list[old_pile_index].remove_card(dropped_card)
         new_event = gameutil.Event(type='Move',
                                    player_index=self.self_player_index,
                                    src_pile = self.card_pile_list[old_pile_index].card_pile_index,
                                    dst_pile = self.card_pile_list[new_pile_index].card_pile_index,
-                                   cards = [card.value for card in cards],
-                                   cards_status = {}
+                                   cards = [card.value for card in cards]
                                    )
         self.event_buffer.append(new_event)
         self.game_state.update_from_event(new_event)
     def flip_card(self, card):
-        card.flip_face()
+        new_face=card.face_flipped()
+
         new_event = gameutil.Event(type='Flip',
                                    player_index=self.self_player_index,
-                                   src_pile = -1,
-                                   dst_pile = -1,
                                    cards = [card.value],
-                                   cards_status = {card.value:card.face}
+                                   cards_status = {card.value:new_face}
                                    )
+
         self.event_buffer.append(new_event)
         self.game_state.update_from_event(new_event)
-
+        card.face= new_face
+    def initiate_game_restart(self):
+        n_card_per_player = (self.n_decks * 64 - self.n_residual_card) // self.n_player
+        n_residual_card = self.n_decks * 64 - n_card_per_player*self.n_player
+        n_card_per_pile = {w: n_card_per_player for w in range(self.n_player)}
+        n_card_per_pile[self.n_player*3]=n_residual_card
+        new_event = gameutil.Event(type='StartNewGame',
+                                   player_index=self.self_player_index,
+                                   n_player = self.n_player,
+                                   n_pile = self.n_pile,
+                                   n_card_per_pile = n_card_per_pile,
+                                   )
+        self.event_buffer.append(new_event)
     def on_mouse_release(self, x: float, y: float, button: int,
                          modifiers: int):
         """ Called when the user presses a mouse button. """
