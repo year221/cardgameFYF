@@ -5,7 +5,7 @@ Card Game Find your friend
 ## Option 1: Use your own Python Environment
 - Install Python
 - Download master branch, unzip.
-- under directory, run `pip -r requirements.txt` to install all dependencies
+- under directory, run `pip install -r requirements.txt` to install all dependencies
 - To run the game, go to fyf folder and run 
 ```
 python client.py [your player index]
