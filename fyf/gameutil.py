@@ -11,13 +11,13 @@ def json_obj_hook(d):
 
 @dataclass
 class GameState:
-    n_pile: int
-    #cards_in_pile: Dict[int, List[Tuple[int, str]]]
-    cards_in_pile: Dict[int, List[int]]#Dict[int, List[Tuple[int, str]]]
-    cards_status : Dict[int, str]
-    n_player: int
-    player_assignment: Dict[int, str]
-    status: str
+    n_pile: int = 0
+    cards_in_pile: Dict[int, List[int]] = field(default_factory=dict)
+    cards_status : Dict[int, str] = field(default_factory=dict)
+    n_player: int = 0
+    player_id: Dict[int, str] = field(default_factory=dict)
+    player_name = Dict[int, str] = field(default_factory=dict)
+    status: str = 'Initialization'
 
     def to_json(self):
         d = asdict(self)
@@ -73,8 +73,9 @@ class GameState:
                 # send some card facedown
                 n_cards_distributed+=val
             self.status='New Game'
-
-
+        elif event.type == 'Connect':
+            self.player_name[event.player_index]= event.player_name
+            self.player_id[event.player_index] = event.player_id
             return [copy.deepcopy(self)]
 
 
@@ -92,9 +93,8 @@ class Event:
     n_card_per_pile : Dict[int, int] = field(default_factory=dict)
     n_pile : int = 19
     face_down_pile : List[int] = field(default_factory=list)
-
-
-
+    player_name : str = ''
+    player_id : str = ''
 
     def to_dict(self):
          return asdict(self)
