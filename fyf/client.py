@@ -20,7 +20,7 @@ parser = argparse.ArgumentParser(description='Card client')
 
 parser.add_argument('playerindex', type=int,
                     help='player index')
-
+parser.add_argument('-n', dest='n_player', type=int, help='number of player', default=6)
 parser.add_argument('-u', dest='server_ip', type=str, help='server ip', default='162.243.211.250')
 # Network
 UPDATE_TICK = 30
@@ -512,7 +512,7 @@ class FYFGame(arcade.View):
         """ Set up the game here. Call this function to restart the game. """
         self.ui_manager.purge_ui_elements()
         self.n_player = n_player
-        self.n_pile = self.n_player *3+1
+        self.n_pile = self.n_player *3+2
         self.self_player_index = player_index
         self.n_decks=n_decks
         self.n_residual_card=n_residual_card
@@ -530,6 +530,8 @@ class FYFGame(arcade.View):
         # own pile
 
         #self.hand_pile_index = len(self.card_pile_list)
+        hand_pile_mat = Mat(len(self.card_pile_list), int(HAND_MAT_WIDTH*CARD_SCALE), int(HAND_MAT_HEIGHT*CARD_SCALE),
+                                   arcade.csscolor.LIGHT_SLATE_GREY)
         self.card_pile_list.append(CardPile(
             card_pile_id=self.self_player_index,
             mat_center=(HAND_MAT_X, HAND_MAT_Y),
@@ -539,8 +541,7 @@ class FYFGame(arcade.View):
             card_offset = (int(CARD_WIDTH*CARD_SCALE*CARD_OFFSET_PCT),int(CARD_HEIGHT*CARD_SCALE)),
             other_properties={'Clearable': False}
         ))
-        hand_pile_mat = Mat(self.self_player_index, int(HAND_MAT_WIDTH*CARD_SCALE), int(HAND_MAT_HEIGHT*CARD_SCALE),
-                                   arcade.csscolor.DARK_OLIVE_GREEN)
+
         hand_pile_mat.position = HAND_MAT_X, HAND_MAT_Y
         self.pile_mat_list.append(hand_pile_mat)
         #print(hand_pile_mat.right)
@@ -601,13 +602,30 @@ class FYFGame(arcade.View):
             )
 
         pile = Mat(len(self.card_pile_list), int(MAT_WIDTH*0.5), int(MAT_HEIGHT*0.3), arcade.csscolor.DARK_SLATE_BLUE)
-        pile.position = MAT_WIDTH//2, MID_CARD_Y
+        pile.position = int(MAT_WIDTH * 0.35), MID_CARD_Y
         self.pile_mat_list.append(pile)
         self.card_pile_list.append(
             CardPile(
                 card_pile_id=self.n_player*3,
-                mat_center=(MAT_WIDTH//2, MID_CARD_Y),
+                mat_center=pile.position,
                 mat_size=(int(MAT_WIDTH * 0.5), int(MAT_HEIGHT * SCORE_MAT_SCALE)),
+                mat_boundary=(int(CARD_WIDTH * SCORE_MAT_SCALE/2), int(CARD_HEIGHT * SCORE_MAT_SCALE/2)),
+                card_scale =SCORE_MAT_SCALE,
+                card_offset=(int(CARD_WIDTH * SCORE_MAT_SCALE * CARD_OFFSET_PCT),
+                             int(CARD_HEIGHT * SCORE_MAT_SCALE * CARD_OFFSET_PCT)),
+                other_properties={'Clearable': False}
+            )
+        )
+
+        pile = Mat(len(self.card_pile_list),
+                     MAT_WIDTH, int(MAT_HEIGHT*0.3), arcade.csscolor.DARK_SLATE_GRAY)
+        pile.position = int(MAT_WIDTH * 1.2), MID_CARD_Y
+        self.pile_mat_list.append(pile)
+        self.card_pile_list.append(
+            CardPile(
+                card_pile_id=self.n_player*3+1,
+                mat_center=pile.position,
+                mat_size=(int(MAT_WIDTH), int(MAT_HEIGHT * SCORE_MAT_SCALE)),
                 mat_boundary=(int(CARD_WIDTH * SCORE_MAT_SCALE/2), int(CARD_HEIGHT * SCORE_MAT_SCALE/2)),
                 card_scale =SCORE_MAT_SCALE,
                 card_offset=(int(CARD_WIDTH * SCORE_MAT_SCALE * CARD_OFFSET_PCT),
@@ -765,6 +783,7 @@ class FYFGame(arcade.View):
                                    n_player = self.n_player,
                                    n_pile = self.n_pile,
                                    n_card_per_pile = n_card_per_pile,
+                                   face_down_pile = [self.n_player*3],
                                    )
         self.event_buffer.append(new_event)
     def on_mouse_release(self, x: float, y: float, button: int,
@@ -857,14 +876,14 @@ def thread_receiver(window: FYFGame, server_ip: str):
 
 
 
-def main(player_index=None, server_ip=None):
+def main(player_index=None, n_player=None, server_ip=None):
     """ Main method """
 
 
 
     window = arcade.Window(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
     game_view = FYFGame()
-    game_view.setup(n_player=6, player_index=player_index)
+    game_view.setup(n_player=n_player, player_index=player_index)
     window.show_view(game_view)
     #window.setup(n_player=6, player_index=player_index)
     thread1 = threading.Thread(
@@ -878,4 +897,4 @@ def main(player_index=None, server_ip=None):
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    main(args.playerindex,args.server_ip)
+    main(args.playerindex, args.n_player, args.server_ip)
