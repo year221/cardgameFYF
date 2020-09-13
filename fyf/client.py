@@ -20,6 +20,7 @@ parser = argparse.ArgumentParser(description='Card client')
 parser.add_argument('playerindex', type=int,
                     help='player index')
 
+parser.add_argument('-u', dest='server_ip', type=str, help='server ip', default='162.243.211.250')
 # Network
 UPDATE_TICK = 30
 # Screen title and size
@@ -722,10 +723,10 @@ class FYFGame(arcade.Window):
             card.center_x += dx
             card.center_y += dy
 
-def thread_pusher(window: FYFGame):
+def thread_pusher(window: FYFGame, server_ip:str):
     ctx = Context()
     push_sock: Socket = ctx.socket(zmq.PUSH)
-    push_sock.connect('tcp://localhost:25001')
+    push_sock.connect(f'tcp://{server_ip}:25001')
     try:
         while True:
             if window.event_buffer:
@@ -740,10 +741,10 @@ def thread_pusher(window: FYFGame):
         ctx.destroy(linger=1)
 
 
-def thread_receiver(window: FYFGame):
+def thread_receiver(window: FYFGame, server_ip: str):
     ctx = Context()
     sub_sock: Socket = ctx.socket(zmq.SUB)
-    sub_sock.connect('tcp://localhost:25000')
+    sub_sock.connect(f'tcp://{server_ip}:25000')
     sub_sock.subscribe('')
     try:
         while True:
@@ -758,14 +759,14 @@ def thread_receiver(window: FYFGame):
 
 
 
-def main(player_index=None):
+def main(player_index=None, server_ip=None):
     """ Main method """
     window = FYFGame()
     window.setup(n_player=6, player_index=player_index)
     thread1 = threading.Thread(
-        target=thread_pusher, args=(window,), daemon=True)
+        target=thread_pusher, args=(window,server_ip,), daemon=True)
     thread2 = threading.Thread(
-        target=thread_receiver, args=(window,), daemon=True)
+        target=thread_receiver, args=(window,server_ip,), daemon=True)
     thread1.start()
     thread2.start()
     arcade.run()
@@ -773,4 +774,4 @@ def main(player_index=None):
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    main(args.playerindex)
+    main(args.playerindex,args.server_ip)
