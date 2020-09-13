@@ -17,7 +17,7 @@ class GameState:
      n_player: int
      player_assignment: Dict[int, str]
      status: str
-     # def __init__(self, n_pile=None, cards_in_pile=None, n_player=None, player_assignment=None, status=None):
+     # def __init__(self, n_pile=None, cards_in_pile=None, cards_status=None, n_player=None, player_assignment=None, status=None):
      #      if n_pile is None:
      #           self.n_pile=0
      #      else:
