@@ -110,7 +110,7 @@ class Mat(arcade.SpriteSolidColor):
 class Card(arcade.Sprite):
     """ Card sprite """
 
-    def __init__(self, code = None, value=None, face_up=False, is_active=False, scale=1):
+    def __init__(self, code = None, value=None, face=False, is_active=False, scale=1):
         """ Card constructor """
 
         # Attributes for suit and value
@@ -123,7 +123,7 @@ class Card(arcade.Sprite):
         if code is not None:
             self.code = code
         else:
-            self._change_value(value, face_up)
+            self._change_value(value, face=='U')
 
 
 
@@ -174,7 +174,15 @@ class Card(arcade.Sprite):
         self.value = code[0]
         self.image_file_name = value2card(self.value)
 
-
+    @property
+    def face(self):
+        return 'U' if self.is_face_up else 'D'
+    @face.setter
+    def face(self, x):
+        if x=='U':
+            self.face_up()
+        else:
+            self.face_down()
 
     @property
     def code(self):
@@ -207,8 +215,8 @@ class Card(arcade.Sprite):
             self.color = COLOR_INACTIVE
 
 
-#def sort_cards(value_list, exclude_values=None):
-#    return [w[0] for w in sorted([(w, (w % 54)) for w in value_list], key=lambda x: x[1])]
+def sort_cards(value_list, exclude_values=None):
+    return [w[0] for w in sorted([(w, (w % 54)) for w in value_list], key=lambda x: x[1])]
 
     #return sorted([w for w in int_list if w not in exclude_values]) + sorted([w for w in int_list if w in exclude_values])
 
@@ -223,25 +231,25 @@ def card_list_to_int_list(card_list):
     return [w.value for w in card_list]
     #return [card2int(card.suit, card.value) for card in card_list]
 
-def update_cards_from_int(card_list, value_list, starting_x, starting_y, max_x, step_x, step_y, scale=CARD_SCALE):
-    sorted_value_list = sort_cards(value_list)
-    c_card_ints = card_list_to_int_list(card_list)
-    if set(c_card_ints) == set(value_list):
-        # if the cards are the same then there is no update
-        return
-    else:
-        while card_list:
-            card_list.pop()
-        card_x = starting_x
-        card_y = starting_y
-        for w in sorted_value_list:
-            card = Card(w, scale=scale)
-            card.position = card_x, card_y
-            card_x = card_x + step_x
-            if card_x >= max_x:
-                card_x = starting_x
-                card_y = card_y -  step_y
-            card_list.append(card)
+# def update_cards_from_int(card_list, value_list, starting_x, starting_y, max_x, step_x, step_y, scale=CARD_SCALE):
+#     sorted_value_list = sort_cards(value_list)
+#     c_card_ints = card_list_to_int_list(card_list)
+#     if set(c_card_ints) == set(value_list):
+#         # if the cards are the same then there is no update
+#         return
+#     else:
+#         while card_list:
+#             card_list.pop()
+#         card_x = starting_x
+#         card_y = starting_y
+#         for w in sorted_value_list:
+#             card = Card(w, scale=scale)
+#             card.position = card_x, card_y
+#             card_x = card_x + step_x
+#             if card_x >= max_x:
+#                 card_x = starting_x
+#                 card_y = card_y -  step_y
+#             card_list.append(card)
 
 
 def arrange_positions(card_list, starting_x, starting_y, max_x, step_x, step_y):
@@ -310,6 +318,8 @@ class CardPile(arcade.SpriteList):
         #self.to_server_type=to_server_type
         #self.from_server_type=from_server_type
         self._cached_codes = []
+        self._cached_values = []
+        self._cached_face_status = {}
 
     def add_card(self, card):
         """ add card """
@@ -327,10 +337,15 @@ class CardPile(arcade.SpriteList):
         #card.y = card_y
         self.append(card)
 
-        self._cached_codes.append(card.code)
+        #self._cached_codes.append(card.code)
+        self._cached_values.append(card.value)
+        self._cached_face_status[card.value]=card.face
 
     def to_valuelist(self):
         return [w.value for w in self]
+
+    def to_face_staus(self):
+        return {w.value:w.face for w in self}
 
     def to_code(self):
         return [w.to_code() for w in self]
@@ -338,30 +353,59 @@ class CardPile(arcade.SpriteList):
     def remove_card(self, card):
         self.remove(card)
         self._cached_codes.remove(card.code)
-    def from_code(self, code_list):
-        code_list = [tuple(w) for w in code_list]
-        card_to_change = set(self._cached_codes) - set(code_list)
-        card_to_add = [w for w in code_list if w not in self._cached_codes]
 
-        if (not card_to_change) and (not card_to_add):
-            return
-        else:
-            if card_to_change:
-                cards_to_remove = []
-                for card in self:
-                    if card.code in card_to_change:
-                        code_if_flipped = card.code_face_flipped()
-                        if code_if_flipped in card_to_add:
-                            # flip the card
-                            card_to_add.remove(code_if_flipped)
-                            card.flip_face()
-                        else:
-                            # add card to be removed
-                            self.remove_card(card)
-                for card in cards_to_remove:
+
+    def from_value_face(self, value_list, face_status_dict):
+        # update pile based on new value list and face status dict
+        #code_list = [tuple(w) for w in code_list]
+        cards_to_remove = set(self._cached_values) - set(value_list)
+        cards_to_add = set(value_list) - set(self._cached_values)
+        cards_to_flip = dict(set(self._cached_face_status.items())-set(face_status_dict.items()))#[key for key, val in self._cached_face_status if (key in face_status_dict) and face_status_dict[key]!=val]
+
+        if cards_to_remove or cards_to_flip or cards_to_add:
+            self._cached_values = value_list
+            self._cached_face_status = {key: value for key, value in face_status_dict.items() if key in self._cached_values}
+
+            if cards_to_remove:
+                cards_to_remove_ls = [card for card in self if card.value in cards_to_remove]
+                for card in cards_to_remove_ls:
                     self.remove(card)
-            for code in card_to_add:
-                self.add_card(Card(code=code))
+
+            if cards_to_flip:
+                cards_to_flip = [card for card in self if card.value in cards_to_flip.keys()]
+                for card in cards_to_flip:
+                    card.flip_face()
+
+            if cards_to_add:
+                for value in cards_to_add:
+                    self.add_card(Card(value=value, face=face_status_dict[value]))
+
+
+
+    # def from_code(self, code_list):
+    #     code_list = [tuple(w) for w in code_list]
+    #     card_to_change = set(self._cached_codes) - set(code_list)
+    #     card_to_add = [w for w in code_list if w not in self._cached_codes]
+    #
+    #     if (not card_to_change) and (not card_to_add):
+    #         return
+    #     else:
+    #         if card_to_change:
+    #             cards_to_remove = []
+    #             for card in self:
+    #                 if card.code in card_to_change:
+    #                     code_if_flipped = card.code_face_flipped()
+    #                     if code_if_flipped in card_to_add:
+    #                         # flip the card
+    #                         card_to_add.remove(code_if_flipped)
+    #                         card.flip_face()
+    #                     else:
+    #                         # add card to be removed
+    #                         self.remove_card(card)
+    #             for card in cards_to_remove:
+    #                 self.remove(card)
+    #         for code in card_to_add:
+    #             self.add_card(Card(code=code))
 
 
     #def sort_cards(self):
@@ -524,7 +568,9 @@ class FYFGame(arcade.Window):
                 #if w.from_server_type==COM_FROM_SERVER_UPDATE:
                 if (w.card_pile_index) in self.game_state.cards_in_pile:
                     #print(self.game_state.cards_in_pile[(w.card_pile_index)])
-                    w.from_code(self.game_state.cards_in_pile[(w.card_pile_index)])
+                    w.from_value_face(self.game_state.cards_in_pile[(w.card_pile_index)], self.game_state.cards_status)
+
+                    #w.from_code(self.game_state.cards_in_pile[(w.card_pile_index)])
 
     def on_draw(self):
         """ Render the screen. """
@@ -604,7 +650,8 @@ class FYFGame(arcade.Window):
                                    player_index=self.self_player_index,
                                    src_pile = self.card_pile_list[old_pile_index].card_pile_index,
                                    dst_pile = self.card_pile_list[new_pile_index].card_pile_index,
-                                   cards = [card.code for card in cards]
+                                   cards = [card.value for card in cards],
+                                   cards_status = {}
                                    )
         self.game_state.update_from_event(new_event)
         self.event_buffer.append(new_event)
