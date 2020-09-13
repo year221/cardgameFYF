@@ -14,6 +14,11 @@ Default is 6 player game. To player other number players, run `python client.py 
 
 To get help information for the commandline, run `python client.py -h`
 
-## Option 2 (Windows Only): We have prepared portable version in a zip file with WinPython packaged in. 
+## Option 2 (Windows Only): Portable version with WinPython
+We have prepared portable version in a zip file with WinPython packaged in. 
+- Download from the release all the zip files
+- Unzip all files
+- Run the bat file based on your chosen player index.
+
 
 
