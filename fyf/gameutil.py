@@ -44,6 +44,14 @@ class GameState:
                         self.cards_in_pile[event.dst_pile].append(card)
             self.status = 'In Game'
             return [copy.deepcopy(self)]
+        if event.type == 'Remove':
+            if event.src_pile in self.cards_in_pile.keys():
+
+                if not (set(event.cards) - set(self.cards_in_pile[event.src_pile])):
+                    for card in event.cards:
+                        self.cards_in_pile[event.src_pile].remove(card)
+            self.status = 'In Game'
+            return [copy.deepcopy(self)]
         elif event.type == 'Flip':
             self.cards_status.update(event.cards_status)
             self.status = 'In Game'
