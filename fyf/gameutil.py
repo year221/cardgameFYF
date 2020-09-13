@@ -66,6 +66,8 @@ class GameState:
                               #print(card_code)
                               self.cards_in_pile[event.src_pile].remove(card)
                               self.cards_in_pile[event.dst_pile].append(card)
+          elif event.type == 'Flip':
+               self.cards_status.update(event.cards_status)
           print("finish update")
 
 
