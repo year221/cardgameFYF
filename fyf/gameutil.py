@@ -1,10 +1,19 @@
 from typing import List, Dict, Tuple
 from dataclasses import dataclass, asdict, field
 import json
+
+def json_obj_hook(d):
+     if isinstance(d, dict):
+          return {int(k) if k.lstrip('-').isdigit() else k: v for k, v in d.items()}
+     else:
+          return d
+
 @dataclass
 class GameState:
      n_pile: int
      cards_in_pile: Dict[int, List[Tuple[int, str]]]
+     #cards_in_pile: Dict[int, List[int]]#Dict[int, List[Tuple[int, str]]]
+     #cards_status = Dict[int, str]
      n_player: int
      player_assignment: Dict[int, str]
      status: str
@@ -16,7 +25,7 @@ class GameState:
           if cards_in_pile is None:
                self.cards_in_pile = []
           else:
-               self.cards_in_pile = {int(key): [tuple(w) for w in val] for key, val in cards_in_pile.items()}
+               self.cards_in_pile = {key: [tuple(w) for w in val] for key, val in cards_in_pile.items()}
           if n_player is None:
                self.n_player = 4
           else:
@@ -26,7 +35,7 @@ class GameState:
           else:
                self.player_assignment = player_assignment
           if status is None:
-               self.status = "N"
+               self.status = "NewGame"
           else:
                self.status = status
      def to_json(self):
@@ -40,15 +49,19 @@ class GameState:
          return json.dumps(d)
 
      def update_from_event(self, event):
-          #print(event.type)
+          print(event)
           #print(self.cards_in_pile.keys())
           if event.type == 'Move':
                if event.src_pile in self.cards_in_pile.keys() and event.dst_pile in self.cards_in_pile.keys():
-                    print(set(event.cards) - set(self.cards_in_pile[event.src_pile]))
+                    #rint(event.cards)
+                    print(event.cards)
+                    print(self.cards_in_pile[event.src_pile])
+                    #event.cards = [tuple(w) for w in event.cards]
+                    #print(set(event.cards) - set(self.cards_in_pile[event.src_pile]))
                     if not (set(event.cards) - set(self.cards_in_pile[event.src_pile])):
-                         print(event.cards)
+
                          for card_code in event.cards:
-                              print(card_code)
+                              #print(card_code)
                               self.cards_in_pile[event.src_pile].remove(card_code)
                               self.cards_in_pile[event.dst_pile].append(card_code)
           print("finish update")
@@ -61,6 +74,7 @@ class Event:
      src_pile: int
      dst_pile: int
      cards: List[Tuple[int, str]]
+
      def __init__(self, type, player_index, src_pile, dst_pile, cards):
           self.type=type
           self.player_index=player_index

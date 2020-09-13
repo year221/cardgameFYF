@@ -11,7 +11,8 @@ import random
 import arcade
 import os
 import argparse
-from gameutil import GameState, Event
+import gameutil
+#import GameState, Event
 
 
 parser = argparse.ArgumentParser(description='Card client')
@@ -338,7 +339,7 @@ class CardPile(arcade.SpriteList):
         self.remove(card)
         self._cached_codes.remove(card.code)
     def from_code(self, code_list):
-
+        code_list = [tuple(w) for w in code_list]
         card_to_change = set(self._cached_codes) - set(code_list)
         card_to_add = [w for w in code_list if w not in self._cached_codes]
 
@@ -507,7 +508,7 @@ class FYFGame(arcade.Window):
         #print(self.card_pile_list[0].to_code())
 
     def update_game_state(self, gs_dict):
-        self.game_state = GameState(**gs_dict)
+        self.game_state = gameutil.GameState(**gs_dict)
 
     #def update_status(self, card_dict):
         #print("us")
@@ -579,7 +580,7 @@ class FYFGame(arcade.Window):
                 self.held_cards_original_position = [self.held_cards[0].position]
 
         elif button == arcade.MOUSE_BUTTON_RIGHT:
-            # change
+            pass
 
     #def remove_card_from_pile(self, card):
     #    """ Remove card from whatever pile it was in. """
@@ -596,17 +597,18 @@ class FYFGame(arcade.Window):
     def move_cards(self, cards, new_pile_index):
         old_pile_index = self.get_pile_index_for_card(cards[0])
 
-        for i, dropped_card in enumerate(cards):
-            self.card_pile_list[new_pile_index].add_card(dropped_card)
-            self.card_pile_list[old_pile_index].remove_card(dropped_card)
-        self.event_buffer.append(
-            Event(type='Move',
-                  player_index=self.self_player_index,
-                  src_pile = self.card_pile_list[old_pile_index].card_pile_index,
-                  dst_pile = self.card_pile_list[new_pile_index].card_pile_index,
-                  cards = [card.code for card in cards]
-                  )
-        )
+        #for i, dropped_card in enumerate(cards):
+        #    self.card_pile_list[new_pile_index].add_card(dropped_card)
+        #    self.card_pile_list[old_pile_index].remove_card(dropped_card)
+        new_event = gameutil.Event(type='Move',
+                                   player_index=self.self_player_index,
+                                   src_pile = self.card_pile_list[old_pile_index].card_pile_index,
+                                   dst_pile = self.card_pile_list[new_pile_index].card_pile_index,
+                                   cards = [card.code for card in cards]
+                                   )
+        self.game_state.update_from_event(new_event)
+        self.event_buffer.append(new_event)
+
     def on_mouse_release(self, x: float, y: float, button: int,
                          modifiers: int):
         """ Called when the user presses a mouse button. """
@@ -686,7 +688,7 @@ def thread_receiver(window: FYFGame):
     sub_sock.subscribe('')
     try:
         while True:
-            gs_dict = sub_sock.recv_json()
+            gs_dict = sub_sock.recv_json(object_hook=gameutil.json_obj_hook)
             window.update_game_state(gs_dict)
             time.sleep(1 / UPDATE_TICK)
 
