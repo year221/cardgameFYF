@@ -1,2 +1,4 @@
+dataclass
+typing
 zmq
 arcade >= 2.4.0
