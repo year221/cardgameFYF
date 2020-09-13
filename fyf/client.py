@@ -99,15 +99,17 @@ def value2card(x):
 class Mat(arcade.SpriteSolidColor):
     """ Mat for a card pile """
 
-    def __init__(self, pile_position_in_card_pile_list,  *args, **kwargs):
+    def __init__(self, pile_position_in_card_pile_list, *args, **kwargs):
         """ Card constructor """
 
         # Attributes for suit and value
         super().__init__(*args, **kwargs)
         # Image to use for the sprite when face up
         self.pile_position_in_card_pile_list = pile_position_in_card_pile_list
-
-
+        #self.text= text
+    #def draw(self):
+    #    super().draw()
+    #    print('drawing')
 
 class Card(arcade.Sprite):
     """ Card sprite """
@@ -497,6 +499,7 @@ class FYFGame(arcade.View):
 
         # Sprite list with all the mats tha cards lay on.
         self.pile_mat_list = None
+        self.pile_text_list = None
         self.card_pile_list = None
         self.event_buffer = []
         self.game_state = None
@@ -526,6 +529,7 @@ class FYFGame(arcade.View):
 
         # Sprite list with all the mats tha cards lay on.
         self.pile_mat_list: arcade.SpriteList = arcade.SpriteList(is_static=True)
+        self.pile_text_list = []
 
         # own pile
 
@@ -544,6 +548,25 @@ class FYFGame(arcade.View):
 
         hand_pile_mat.position = HAND_MAT_X, HAND_MAT_Y
         self.pile_mat_list.append(hand_pile_mat)
+        self.pile_text_list.append(('Your Private Pile', hand_pile_mat.center_x-50, hand_pile_mat.center_y, arcade.color.GOLD, 15))
+        starting_x = hand_pile_mat.right+20
+        starting_y = hand_pile_mat.top - 20
+        step_y = 20
+        self.pile_text_list.append(
+            ("Left press/release to drag", starting_x, starting_y, arcade.csscolor.GOLD, 15))
+        self.pile_text_list.append(
+            ("Right click to flip a card", starting_x, starting_y-step_y, arcade.csscolor.GOLD, 15))
+        self.pile_text_list.append(
+            ("CTRL + right click to clear a pile", starting_x, starting_y-step_y*2, arcade.csscolor.GOLD,
+             15))
+        self.pile_text_list.append(
+            ("ALT + right click to sort a pile", starting_x, starting_y-step_y*3, arcade.csscolor.GOLD,
+             15))
+        self.pile_text_list.append(
+            ("CLRT + R to reset the game", starting_x, starting_y-step_y*4, arcade.csscolor.GOLD,
+             15))
+
+
         #print(hand_pile_mat.right)
         #print(hand_pile_mat.bottom)
 
@@ -579,6 +602,12 @@ class FYFGame(arcade.View):
                     other_properties = {'Clearable':True}
                 )
             )
+            if player_index == self.self_player_index:
+                self.pile_text_list.append(
+                    ('Public: Lay your card here', pile.center_x-50, pile.center_y, arcade.color.DARK_GRAY, 10))
+            else:
+                self.pile_text_list.append(
+                    ("Public: Other's card", pile.center_x-50, pile.center_y, arcade.color.DARK_GRAY, 10))
         # score piles for each player
         starting_index_score_pile = self.n_player*2
         for player_index in range(self.n_player):
@@ -600,6 +629,12 @@ class FYFGame(arcade.View):
                     other_properties={'Clearable': False}
                 )
             )
+            if player_index == self.self_player_index:
+                self.pile_text_list.append(
+                    ('Public: put cards you won here', pile.center_x-50, pile.center_y, arcade.csscolor.DARK_GRAY, 10))
+            else:
+                self.pile_text_list.append(
+                    ("Public: other's scored cards", pile.center_x-50, pile.center_y, arcade.csscolor.DARK_GRAY, 10))
 
         pile = Mat(len(self.card_pile_list), int(MAT_WIDTH*0.5), int(MAT_HEIGHT*0.3), arcade.csscolor.DARK_SLATE_BLUE)
         pile.position = int(MAT_WIDTH * 0.35), MID_CARD_Y
@@ -616,6 +651,8 @@ class FYFGame(arcade.View):
                 other_properties={'Clearable': False}
             )
         )
+        self.pile_text_list.append(
+            ("Public: hidden pile", pile.center_x - 50, pile.center_y, arcade.csscolor.DARK_GRAY, 10))
 
         pile = Mat(len(self.card_pile_list),
                      MAT_WIDTH, int(MAT_HEIGHT*0.3), arcade.csscolor.DARK_SLATE_GRAY)
@@ -633,6 +670,8 @@ class FYFGame(arcade.View):
                 other_properties={'Clearable': False}
             )
         )
+        self.pile_text_list.append(
+            ("Public: all scored cards", pile.center_x - 50, pile.center_y, arcade.csscolor.DARK_GRAY, 10))
         #self.card_pile_list[0].from_code(sort_card_codes(list(zip(list(range(108)), ['U']*108))))
 
         #print(self.card_pile_list[0].to_code())
@@ -673,6 +712,10 @@ class FYFGame(arcade.View):
 
         # Draw the mats the cards go on to
         self.pile_mat_list.draw()
+
+        # draw text
+        for text, x, y, color, size in self.pile_text_list:
+            arcade.draw_text(text, x, y, color, size)
 
         # Draw the cards
 
