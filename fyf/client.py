@@ -13,13 +13,14 @@ import os
 import argparse
 import gameutil
 #import GameState, Event
-
+from arcade import gui
+import copy
 
 parser = argparse.ArgumentParser(description='Card client')
 
 parser.add_argument('playerindex', type=int,
                     help='player index')
-
+parser.add_argument('-n', dest='n_player', type=int, help='number of player', default=6)
 parser.add_argument('-u', dest='server_ip', type=str, help='server ip', default='162.243.211.250')
 # Network
 UPDATE_TICK = 30
@@ -96,15 +97,15 @@ def value2card(x):
 #    return CARD_SUITS[(x % 54)//13], CARD_VALUES[x%13]
 
 class Mat(arcade.SpriteSolidColor):
-    """ Card sprite """
+    """ Mat for a card pile """
 
-    def __init__(self, index,  *args, **kwargs):
+    def __init__(self, pile_position_in_card_pile_list,  *args, **kwargs):
         """ Card constructor """
 
         # Attributes for suit and value
         super().__init__(*args, **kwargs)
         # Image to use for the sprite when face up
-        self.index = index
+        self.pile_position_in_card_pile_list = pile_position_in_card_pile_list
 
 
 
@@ -295,11 +296,11 @@ COM_FROM_SERVER_UPDATE = 1
 COM_FROM_SERVER_NOUPDATE = 0
 
 
-
+SORT_BY_SUIT=1
 class CardPile(arcade.SpriteList):
     """ Card sprite """
 
-    def __init__(self, card_pile_index, mat_center, mat_size, mat_boundary, card_scale, card_offset,  *args, **kwargs):
+    def __init__(self, card_pile_id, mat_center, mat_size, mat_boundary, card_scale, card_offset,  other_properties=None, *args, **kwargs):
         """ Card constructor """
 
         super().__init__( *args, **kwargs)
@@ -312,7 +313,7 @@ class CardPile(arcade.SpriteList):
         #    self.can_add_card = False
         #else:
         #    self.can_add_card = can_add_card
-        self.card_pile_index=card_pile_index
+        self.card_pile_id=card_pile_id
         self.card_start_x, self.card_start_y= mat_center[0] - mat_size[0]//2 + mat_boundary[0], mat_center[1] + mat_size[1]//2 - mat_boundary[1]
         self.card_max_x = mat_center[0] + mat_size[0]//2 - mat_boundary[0]
         self.step_x, self.step_y = int(card_offset[0]), int(card_offset[1])
@@ -322,7 +323,9 @@ class CardPile(arcade.SpriteList):
         #self._cached_codes = []
         self._cached_values = []
         self._cached_face_status = {}
-    def reset(self):
+        self.other_properties = copy.deepcopy(other_properties)
+
+    def clear(self):
         self._cached_values = []
         self._cached_face_status = {}
         while self.__len__() > 0:
@@ -362,6 +365,18 @@ class CardPile(arcade.SpriteList):
         self._cached_values.remove(card.value)
         self._cached_face_status.pop(card.value)
         #self._cached_codes.remove(card.code)
+
+    def sort_cards(self, sorting_rule = SORT_BY_SUIT):
+        """ sort cards based on certain order
+
+        :param sorting_rule:
+        :return: None
+        """
+        if sorting_rule == SORT_BY_SUIT:
+            sorted_cards = sorted([(w, w.value % 54) for w in self], key = lambda x:x[1])
+            self.clear()
+            for card, _ in sorted_cards:
+                self.add_card(card)
 
 
     def from_value_face(self, value_list, face_status_dict):
@@ -456,13 +471,14 @@ def get_minimum_distance_mat(card, mat_list):
 GAME_STATUS_RESET = -1
 GAME_STATUS_ONGOING = 0
 
-
-class FYFGame(arcade.Window):
+SORT_BUTTON_WIDTH=100
+BUTTON_HEIGHT=20
+class FYFGame(arcade.View):
     """ Main application class. """
 
-    def __init__(self, n_player=6, n_decks=6, n_residual_card=6):
-        super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
-
+    def __init__(self):
+        super().__init__()#SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
+        self.ui_manager = gui.UIManager()
         arcade.set_background_color(arcade.color.AMAZON)
         self.n_player = None
         self.self_player_index = None
@@ -485,15 +501,18 @@ class FYFGame(arcade.Window):
         self.event_buffer = []
         self.game_state = None
 
-    def reset_all_piles(self):
+
+    def clear_all_piles(self):
         for card_pile in self.card_pile_list:
-            card_pile.reset()
+            card_pile.clear()
+
+
 
     def setup(self, n_player = 6, player_index=1, n_decks=6, n_residual_card=6):
         """ Set up the game here. Call this function to restart the game. """
-
+        self.ui_manager.purge_ui_elements()
         self.n_player = n_player
-        self.n_pile = self.n_player *3+1
+        self.n_pile = self.n_player *3+2
         self.self_player_index = player_index
         self.n_decks=n_decks
         self.n_residual_card=n_residual_card
@@ -511,18 +530,31 @@ class FYFGame(arcade.Window):
         # own pile
 
         #self.hand_pile_index = len(self.card_pile_list)
+        hand_pile_mat = Mat(len(self.card_pile_list), int(HAND_MAT_WIDTH*CARD_SCALE), int(HAND_MAT_HEIGHT*CARD_SCALE),
+                                   arcade.csscolor.LIGHT_SLATE_GREY)
         self.card_pile_list.append(CardPile(
-            card_pile_index=self.self_player_index,
+            card_pile_id=self.self_player_index,
             mat_center=(HAND_MAT_X, HAND_MAT_Y),
             mat_size = (HAND_MAT_WIDTH*CARD_SCALE, HAND_MAT_HEIGHT*CARD_SCALE),
             mat_boundary=(int(CARD_WIDTH*CARD_SCALE/2), int(CARD_HEIGHT*CARD_SCALE/2)),
             card_scale = CARD_SCALE,
-            card_offset = (int(CARD_WIDTH*CARD_SCALE*CARD_OFFSET_PCT),int(CARD_HEIGHT*CARD_SCALE))
+            card_offset = (int(CARD_WIDTH*CARD_SCALE*CARD_OFFSET_PCT),int(CARD_HEIGHT*CARD_SCALE)),
+            other_properties={'Clearable': False}
         ))
-        hand_pile_mat = Mat(self.self_player_index, int(HAND_MAT_WIDTH*CARD_SCALE), int(HAND_MAT_HEIGHT*CARD_SCALE),
-                                   arcade.csscolor.DARK_OLIVE_GREEN)
+
         hand_pile_mat.position = HAND_MAT_X, HAND_MAT_Y
         self.pile_mat_list.append(hand_pile_mat)
+        #print(hand_pile_mat.right)
+        #print(hand_pile_mat.bottom)
+
+        # button = gui.UIFlatButton(
+        #     'sort',
+        #     center_x=int(hand_pile_mat.right-SORT_BUTTON_WIDTH//2),
+        #     center_y=int(hand_pile_mat.bottom+BUTTON_HEIGHT//2),
+        #     width=SORT_BUTTON_WIDTH,
+        #     height=BUTTON_HEIGHT
+        # )
+        #self.ui_manager.add_ui_element(button)
 
         #output_card_pile = arcade.SpriteSolidColor(MAT_WIDTH, MAT_HEIGHT, arcade.csscolor.DARK_OLIVE_GREEN)
         #output_card_pile.position = int(SCREEN_WIDTH/2), int(HAND_MAT_Y+HAND_MAT_HEIGHT/2+MAT_HEIGHT)
@@ -538,12 +570,13 @@ class FYFGame(arcade.Window):
             self.pile_mat_list.append(pile)
             self.card_pile_list.append(
                 CardPile(
-                    card_pile_index=player_index+starting_index_output_pile,
+                    card_pile_id=player_index+starting_index_output_pile,
                     mat_center = (pile_position[0], pile_position[1]),
                     mat_size = (int(MAT_WIDTH*NORMAL_MAT_SCALE), int(MAT_HEIGHT*NORMAL_MAT_SCALE)),
                     mat_boundary = (int(CARD_WIDTH*NORMAL_MAT_SCALE/2), int(CARD_HEIGHT*NORMAL_MAT_SCALE/2)),
                     card_scale = NORMAL_MAT_SCALE,
-                    card_offset = (int(CARD_WIDTH*NORMAL_MAT_SCALE*CARD_OFFSET_PCT),int(CARD_HEIGHT*NORMAL_MAT_SCALE*CARD_OFFSET_PCT))
+                    card_offset = (int(CARD_WIDTH*NORMAL_MAT_SCALE*CARD_OFFSET_PCT),int(CARD_HEIGHT*NORMAL_MAT_SCALE*CARD_OFFSET_PCT)),
+                    other_properties = {'Clearable':True}
                 )
             )
         # score piles for each player
@@ -557,28 +590,47 @@ class FYFGame(arcade.Window):
             self.pile_mat_list.append(pile)
             self.card_pile_list.append(
                 CardPile(
-                    card_pile_index=player_index + starting_index_score_pile,
+                    card_pile_id=player_index + starting_index_score_pile,
                     mat_center=(pile_position[0], pile_position[1]),
                     mat_size=(int(MAT_WIDTH * 0.5), int(MAT_HEIGHT * SCORE_MAT_SCALE)),
                     mat_boundary=(int(CARD_WIDTH * SCORE_MAT_SCALE/2), int(CARD_HEIGHT * SCORE_MAT_SCALE/2)),
                     card_scale =SCORE_MAT_SCALE,
                     card_offset=(int(CARD_WIDTH * SCORE_MAT_SCALE * CARD_OFFSET_PCT),
-                                 int(CARD_HEIGHT * SCORE_MAT_SCALE * CARD_OFFSET_PCT))
+                                 int(CARD_HEIGHT * SCORE_MAT_SCALE * CARD_OFFSET_PCT)),
+                    other_properties={'Clearable': False}
                 )
             )
 
         pile = Mat(len(self.card_pile_list), int(MAT_WIDTH*0.5), int(MAT_HEIGHT*0.3), arcade.csscolor.DARK_SLATE_BLUE)
-        pile.position = MAT_WIDTH//2, MID_CARD_Y
+        pile.position = int(MAT_WIDTH * 0.35), MID_CARD_Y
         self.pile_mat_list.append(pile)
         self.card_pile_list.append(
             CardPile(
-                card_pile_index=self.n_player*3,
-                mat_center=(MAT_WIDTH//2, MID_CARD_Y),
+                card_pile_id=self.n_player*3,
+                mat_center=pile.position,
                 mat_size=(int(MAT_WIDTH * 0.5), int(MAT_HEIGHT * SCORE_MAT_SCALE)),
                 mat_boundary=(int(CARD_WIDTH * SCORE_MAT_SCALE/2), int(CARD_HEIGHT * SCORE_MAT_SCALE/2)),
                 card_scale =SCORE_MAT_SCALE,
                 card_offset=(int(CARD_WIDTH * SCORE_MAT_SCALE * CARD_OFFSET_PCT),
-                             int(CARD_HEIGHT * SCORE_MAT_SCALE * CARD_OFFSET_PCT))
+                             int(CARD_HEIGHT * SCORE_MAT_SCALE * CARD_OFFSET_PCT)),
+                other_properties={'Clearable': False}
+            )
+        )
+
+        pile = Mat(len(self.card_pile_list),
+                     MAT_WIDTH, int(MAT_HEIGHT*0.3), arcade.csscolor.DARK_SLATE_GRAY)
+        pile.position = int(MAT_WIDTH * 1.2), MID_CARD_Y
+        self.pile_mat_list.append(pile)
+        self.card_pile_list.append(
+            CardPile(
+                card_pile_id=self.n_player*3+1,
+                mat_center=pile.position,
+                mat_size=(int(MAT_WIDTH), int(MAT_HEIGHT * SCORE_MAT_SCALE)),
+                mat_boundary=(int(CARD_WIDTH * SCORE_MAT_SCALE/2), int(CARD_HEIGHT * SCORE_MAT_SCALE/2)),
+                card_scale =SCORE_MAT_SCALE,
+                card_offset=(int(CARD_WIDTH * SCORE_MAT_SCALE * CARD_OFFSET_PCT),
+                             int(CARD_HEIGHT * SCORE_MAT_SCALE * CARD_OFFSET_PCT)),
+                other_properties={'Clearable': False}
             )
         )
         #self.card_pile_list[0].from_code(sort_card_codes(list(zip(list(range(108)), ['U']*108))))
@@ -601,16 +653,16 @@ class FYFGame(arcade.Window):
             if self.game_state.status=='New Game':
 
                 self.game_state.status='Game'
-                self.reset_all_piles()
+                self.clear_all_piles()
             #print(self.game_state.status)
 
             for w in self.card_pile_list:
                 #if w.from_server_type==COM_FROM_SERVER_UPDATE:
-                if (w.card_pile_index) in self.game_state.cards_in_pile:
-                    #print(self.game_state.cards_in_pile[(w.card_pile_index)])
-                    w.from_value_face(self.game_state.cards_in_pile[w.card_pile_index], self.game_state.cards_status)
+                if (w.card_pile_id) in self.game_state.cards_in_pile:
+                    #print(self.game_state.cards_in_pile[(w.card_pile_id)])
+                    w.from_value_face(self.game_state.cards_in_pile[w.card_pile_id], self.game_state.cards_status)
 
-                    #w.from_code(self.game_state.cards_in_pile[(w.card_pile_index)])
+                    #w.from_code(self.game_state.cards_in_pile[(w.card_pile_id)])
 
     def on_draw(self):
         """ Render the screen. """
@@ -646,18 +698,29 @@ class FYFGame(arcade.Window):
 
         c_mats = arcade.get_sprites_at_point((x, y), self.pile_mat_list)
         if len(c_mats)>0:
-            pile_index = c_mats[0].index
-            #if self.card_pile_list[pile_index].can_remove_card:
-            cards = arcade.get_sprites_at_point((x, y), self.card_pile_list[pile_index])
-            if len(cards) > 0:
+            pile_index = c_mats[0].pile_position_in_card_pile_list
 
-                primary_card = cards[-1]
-                if button == arcade.MOUSE_BUTTON_LEFT:
-                    self.held_cards = [primary_card]
-                    self.held_cards_original_position = [self.held_cards[0].position]
+            if button == arcade.MOUSE_BUTTON_RIGHT and (key_modifiers & arcade.key.MOD_ALT):
+                # with control, sort current piles
+                self.card_pile_list[pile_index].sort_cards()
+            elif button == arcade.MOUSE_BUTTON_RIGHT and (key_modifiers & arcade.key.MOD_CTRL):
+                self.clear_a_pile(pile_index)
+            else:
+                #if self.card_pile_list[pile_index].can_remove_card:
+                cards = arcade.get_sprites_at_point((x, y), self.card_pile_list[pile_index])
+                if len(cards) > 0:
 
-                elif button == arcade.MOUSE_BUTTON_RIGHT:
-                    self.flip_card(primary_card)
+                    primary_card = cards[-1]
+                    if button == arcade.MOUSE_BUTTON_LEFT:
+                        self.held_cards = [primary_card]
+                        self.held_cards_original_position = [self.held_cards[0].position]
+
+                    elif button == arcade.MOUSE_BUTTON_RIGHT:
+                        #if key_modifiers & arcade.key.MOD_CTRL:
+                            # with control, sort current piles
+                        #    self.card_pile_list[pile_index].sort_cards()
+                        #else:
+                        self.flip_card(primary_card)
 
     #def remove_card_from_pile(self, card):
     #    """ Remove card from whatever pile it was in. """
@@ -679,8 +742,8 @@ class FYFGame(arcade.Window):
             self.card_pile_list[old_pile_index].remove_card(dropped_card)
         new_event = gameutil.Event(type='Move',
                                    player_index=self.self_player_index,
-                                   src_pile = self.card_pile_list[old_pile_index].card_pile_index,
-                                   dst_pile = self.card_pile_list[new_pile_index].card_pile_index,
+                                   src_pile = self.card_pile_list[old_pile_index].card_pile_id,
+                                   dst_pile = self.card_pile_list[new_pile_index].card_pile_id,
                                    cards = [card.value for card in cards]
                                    )
         self.event_buffer.append(new_event)
@@ -697,6 +760,19 @@ class FYFGame(arcade.Window):
         self.event_buffer.append(new_event)
         self.game_state.update_from_event(new_event)
         card.face= new_face
+    def clear_a_pile(self, pile_index):
+        if 'Clearable' in self.card_pile_list[pile_index].other_properties:
+            if self.card_pile_list[pile_index].other_properties['Clearable']:
+                new_event = gameutil.Event(type='Remove',
+                                           player_index=self.self_player_index,
+                                           src_pile = self.card_pile_list[pile_index].card_pile_id,
+                                           cards = self.card_pile_list[pile_index].to_valuelist()
+                                           )
+                self.card_pile_list[pile_index].clear()  # remove_card(dropped_card)
+                self.event_buffer.append(new_event)
+                self.game_state.update_from_event(new_event)
+
+
     def initiate_game_restart(self):
         n_card_per_player = (self.n_decks * 64 - self.n_residual_card) // self.n_player
         n_residual_card = self.n_decks * 64 - n_card_per_player*self.n_player
@@ -707,6 +783,7 @@ class FYFGame(arcade.Window):
                                    n_player = self.n_player,
                                    n_pile = self.n_pile,
                                    n_card_per_pile = n_card_per_pile,
+                                   face_down_pile = [self.n_player*3],
                                    )
         self.event_buffer.append(new_event)
     def on_mouse_release(self, x: float, y: float, button: int,
@@ -728,7 +805,7 @@ class FYFGame(arcade.Window):
         if arcade.check_for_collision(self.held_cards[0], new_pile):
 
             # What pile is it?
-            new_pile_index = new_pile.index#self.pile_mat_list.index(pile)
+            new_pile_index = new_pile.pile_position_in_card_pile_list#self.pile_mat_list.index(pile)
 
             #  Is it the same pile we came from?
             #print("rl")
@@ -799,14 +876,20 @@ def thread_receiver(window: FYFGame, server_ip: str):
 
 
 
-def main(player_index=None, server_ip=None):
+def main(player_index=None, n_player=None, server_ip=None):
     """ Main method """
-    window = FYFGame()
-    window.setup(n_player=6, player_index=player_index)
+
+
+
+    window = arcade.Window(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
+    game_view = FYFGame()
+    game_view.setup(n_player=n_player, player_index=player_index)
+    window.show_view(game_view)
+    #window.setup(n_player=6, player_index=player_index)
     thread1 = threading.Thread(
-        target=thread_pusher, args=(window,server_ip,), daemon=True)
+        target=thread_pusher, args=(game_view,server_ip,), daemon=True)
     thread2 = threading.Thread(
-        target=thread_receiver, args=(window,server_ip,), daemon=True)
+        target=thread_receiver, args=(game_view,server_ip,), daemon=True)
     thread1.start()
     thread2.start()
     arcade.run()
@@ -814,4 +897,4 @@ def main(player_index=None, server_ip=None):
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    main(args.playerindex,args.server_ip)
+    main(args.playerindex, args.n_player, args.server_ip)

@@ -44,6 +44,14 @@ class GameState:
                         self.cards_in_pile[event.dst_pile].append(card)
             self.status = 'In Game'
             return [copy.deepcopy(self)]
+        if event.type == 'Remove':
+            if event.src_pile in self.cards_in_pile.keys():
+
+                if not (set(event.cards) - set(self.cards_in_pile[event.src_pile])):
+                    for card in event.cards:
+                        self.cards_in_pile[event.src_pile].remove(card)
+            self.status = 'In Game'
+            return [copy.deepcopy(self)]
         elif event.type == 'Flip':
             self.cards_status.update(event.cards_status)
             self.status = 'In Game'
@@ -59,7 +67,10 @@ class GameState:
             n_cards_distributed = 0
             self.cards_in_pile = {w:[] for w in range(self.n_pile)}
             for key, val in event.n_card_per_pile.items():
+                if key in event.face_down_pile:
+                    self.cards_status.update({w:'D' for w in all_cards[n_cards_distributed: n_cards_distributed+val]})
                 self.cards_in_pile[key] = all_cards[n_cards_distributed: n_cards_distributed+val]
+                # send some card facedown
                 n_cards_distributed+=val
             self.status='New Game'
 
@@ -80,6 +91,7 @@ class Event:
     n_player : int = 6
     n_card_per_pile : Dict[int, int] = field(default_factory=dict)
     n_pile : int = 19
+    face_down_pile : List[int] = field(default_factory=list)
 
 
 
