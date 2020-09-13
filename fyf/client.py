@@ -180,7 +180,7 @@ class Card(arcade.Sprite):
         return 'U' if self._is_face_up else 'D'
     @face.setter
     def face(self, x):
-        if x=='U':
+        if x == 'U':
             self.face_up()
         else:
             self.face_down()
@@ -199,9 +199,10 @@ class Card(arcade.Sprite):
             self.face_down()
 
 
-    def code_face_flipped(self):
-        return self.value, 'D' if self._is_face_up else 'U'
-
+    #def code_face_flipped(self):
+    #    return self.value, 'D' if self._is_face_up else 'U'
+    def face_flipped(self):
+        return 'D' if self._is_face_up else 'U'
 
     @property
     def active(self):
@@ -361,6 +362,7 @@ class CardPile(arcade.SpriteList):
         #code_list = [tuple(w) for w in code_list]
         cards_to_remove = set(self._cached_values) - set(value_list)
         cards_to_add = set(value_list) - set(self._cached_values)
+
         cards_to_flip = dict(set(self._cached_face_status.items())-set(face_status_dict.items()))#[key for key, val in self._cached_face_status if (key in face_status_dict) and face_status_dict[key]!=val]
 
         if cards_to_remove or cards_to_flip or cards_to_add:
@@ -375,7 +377,7 @@ class CardPile(arcade.SpriteList):
             if cards_to_flip:
                 cards_to_flip = [card for card in self if card.value in cards_to_flip.keys()]
                 for card in cards_to_flip:
-                    card.flip_face()
+                    card.face = face_status_dict[card.value]
 
             if cards_to_add:
                 for value in cards_to_add:
@@ -569,7 +571,7 @@ class FYFGame(arcade.Window):
                 #if w.from_server_type==COM_FROM_SERVER_UPDATE:
                 if (w.card_pile_index) in self.game_state.cards_in_pile:
                     #print(self.game_state.cards_in_pile[(w.card_pile_index)])
-                    w.from_value_face(self.game_state.cards_in_pile[(w.card_pile_index)], self.game_state.cards_status)
+                    w.from_value_face(self.game_state.cards_in_pile[w.card_pile_index], self.game_state.cards_status)
 
                     #w.from_code(self.game_state.cards_in_pile[(w.card_pile_index)])
 
@@ -658,16 +660,19 @@ class FYFGame(arcade.Window):
         self.event_buffer.append(new_event)
         self.game_state.update_from_event(new_event)
     def flip_card(self, card):
-        card.flip_face()
+        new_face=card.face_flipped()
+
         new_event = gameutil.Event(type='Flip',
                                    player_index=self.self_player_index,
                                    src_pile = -1,
                                    dst_pile = -1,
                                    cards = [card.value],
-                                   cards_status = {card.value:card.face}
+                                   cards_status = {card.value:new_face}
                                    )
+
         self.event_buffer.append(new_event)
         self.game_state.update_from_event(new_event)
+        card.face= new_face
 
     def on_mouse_release(self, x: float, y: float, button: int,
                          modifiers: int):
