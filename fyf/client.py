@@ -402,7 +402,8 @@ class CardPile(arcade.SpriteList):
                 for value in cards_to_add:
                     self.add_card(Card(value=value, face=face_status_dict[value]))
 
-
+        card_added_removed = set.union(cards_to_remove, cards_to_add)
+        return card_added_removed
 
     # def from_code(self, code_list):
     #     code_list = [tuple(w) for w in code_list]
@@ -703,14 +704,33 @@ class FYFGame(arcade.View):
                 self.game_state.status='Game'
                 self.clear_all_piles()
             #print(self.game_state.status)
-
+            #all_card_changed_removed = set()
+            held_cards_value = [w.value for w in self.held_cards]
+            active_cards_value = [w.value for w in self.active_cards]
             for w in self.card_pile_list:
                 #if w.from_server_type==COM_FROM_SERVER_UPDATE:
+                # check whether hand-held cards affected
                 if (w.card_pile_id) in self.game_state.cards_in_pile:
                     #print(self.game_state.cards_in_pile[(w.card_pile_id)])
-                    w.from_value_face(self.game_state.cards_in_pile[w.card_pile_id], self.game_state.cards_status)
+                    card_changed_removed = w.from_value_face(self.game_state.cards_in_pile[w.card_pile_id], self.game_state.cards_status)
+                    for card_value in card_changed_removed:
+                        if card_value in held_cards_value:
+                            index = held_cards_value.index(card_value)
+                            if self.held_cards[index] == self.card_on_press:
+                                self.card_on_press = None
+                            self.held_cards.remove(self.held_cards[index])
+                            self.held_cards_original_position.remove(self.held_cards_original_position[index])
+                            self.held_cards_value.remove(self.held_cards_value[index])
 
-                    #w.from_code(self.game_state.cards_in_pile[(w.card_pile_id)])
+                        if card_value in active_cards_value:
+                            index = active_cards_value.index(card_value)
+                            self.active_cards[index].active = False
+                            self.active_cards.remove(self.active_cards[index])
+                            self.active_cards_value.remove(self.active_cards_value[index])
+                    #all_card_changed_removed = set.union(all_card_changed_removed, card_changed_removed)
+
+
+                #w.from_code(self.game_state.cards_in_pile[(w.card_pile_id)])
 
     def on_draw(self):
         """ Render the screen. """
@@ -841,9 +861,9 @@ class FYFGame(arcade.View):
                 cards = arcade.get_sprites_at_point((x, y), self.card_pile_list[new_pile_index])
                 if len(cards) >= 1:
                     primary_card = cards[-1]
-                    print(f'press: {self.card_on_press.value}')
+                    #print(f'press: {self.card_on_press.value}')
                     if primary_card is not None:
-                        print(primary_card.value)
+                        #print(primary_card.value)
                         if primary_card == self.card_on_press:
                             # did not move position
                             #for card_index, card in enumerate(self.held_cards):
@@ -852,7 +872,7 @@ class FYFGame(arcade.View):
                             #self.held_cards_original_position = []
                             # switch state
                             if self.card_on_press.active:
-                                print(f'active: {self.card_on_press.active}')
+                                #print(f'active: {self.card_on_press.active}')
                                 # if it wars active
                                 self.card_on_press.active = False
                                 self.active_cards.remove(self.card_on_press)
@@ -867,7 +887,7 @@ class FYFGame(arcade.View):
                 self.active_cards = []
                 # Success, don't reset position of cards
                 reset_position = False
-        print(f'reset: {reset_position}')
+        #print(f'reset: {reset_position}')
         if reset_position:
             # Where-ever we were dropped, it wasn't valid. Reset the each card's position
             # to its original spot.
