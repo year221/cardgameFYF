@@ -15,11 +15,14 @@ import gameutil
 #import GameState, Event
 from arcade import gui
 import copy
+import uuid
 
 parser = argparse.ArgumentParser(description='Card client')
 
 parser.add_argument('playerindex', type=int,
                     help='player index')
+
+parser.add_argument('-p', dest='player_name', type=str, help='your name to be displayed', default='')
 parser.add_argument('-n', dest='n_player', type=int, help='number of player', default=6)
 parser.add_argument('-u', dest='server_ip', type=str, help='server ip', default='162.243.211.250')
 # Network
@@ -316,6 +319,7 @@ class CardPile(arcade.SpriteList):
         #else:
         #    self.can_add_card = can_add_card
         self.card_pile_id=card_pile_id
+        self.mat_center = mat_center
         self.card_start_x, self.card_start_y= mat_center[0] - mat_size[0]//2 + mat_boundary[0], mat_center[1] + mat_size[1]//2 - mat_boundary[1]
         self.card_max_x = mat_center[0] + mat_size[0]//2 - mat_boundary[0]
         self.step_x, self.step_y = int(card_offset[0]), int(card_offset[1])
@@ -478,7 +482,7 @@ BUTTON_HEIGHT=20
 class FYFGame(arcade.View):
     """ Main application class. """
 
-    def __init__(self):
+    def __init__(self, player_name=None):
         super().__init__()#SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
         self.ui_manager = gui.UIManager()
         arcade.set_background_color(arcade.color.AMAZON)
@@ -503,7 +507,9 @@ class FYFGame(arcade.View):
         self.card_pile_list = None
         self.event_buffer = []
         self.game_state = None
-
+        self.player_id = str(uuid.uuid4())
+        self.player_name = player_name
+        self.player_name_display_list = None
 
     def clear_all_piles(self):
         for card_pile in self.card_pile_list:
@@ -530,6 +536,7 @@ class FYFGame(arcade.View):
         # Sprite list with all the mats tha cards lay on.
         self.pile_mat_list: arcade.SpriteList = arcade.SpriteList(is_static=True)
         self.pile_text_list = []
+        self.player_name_display_list = []
 
         # own pile
 
@@ -604,10 +611,14 @@ class FYFGame(arcade.View):
             )
             if player_index == self.self_player_index:
                 self.pile_text_list.append(
-                    ('Public: Lay your card here', pile.center_x-50, pile.center_y, arcade.color.DARK_GRAY, 10))
-            else:
-                self.pile_text_list.append(
-                    ("Public: Other's card", pile.center_x-50, pile.center_y, arcade.color.DARK_GRAY, 10))
+                    ('Lay your card here', pile.center_x-50, pile.center_y, arcade.color.DARK_GRAY, 10))
+            #else:
+            #    self.pile_text_list.append(
+            #        ("Public: Other's card", pile.center_x-50, pile.center_y, arcade.color.DARK_GRAY, 10))
+
+            self.player_name_display_list.append(
+                (player_index, pile.center_x - 50, pile.center_y-20, arcade.color.DARK_GRAY, 10)
+            )
         # score piles for each player
         starting_index_score_pile = self.n_player*2
         for player_index in range(self.n_player):
@@ -630,11 +641,11 @@ class FYFGame(arcade.View):
                 )
             )
             if player_index == self.self_player_index:
-                self.pile_text_list.append(
-                    ('Public: put cards you won here', pile.center_x-50, pile.center_y, arcade.csscolor.DARK_GRAY, 10))
-            else:
-                self.pile_text_list.append(
-                    ("Public: other's scored cards", pile.center_x-50, pile.center_y, arcade.csscolor.DARK_GRAY, 10))
+               self.pile_text_list.append(
+                    ('Cards you scored', pile.center_x-50, pile.center_y, arcade.csscolor.DARK_GRAY, 10))
+            #else:
+            #    self.pile_text_list.append(
+            #        ("Public: other's scored cards", pile.center_x-50, pile.center_y, arcade.csscolor.DARK_GRAY, 10))
 
         pile = Mat(len(self.card_pile_list), int(MAT_WIDTH*0.5), int(MAT_HEIGHT*0.3), arcade.csscolor.DARK_SLATE_BLUE)
         pile.position = int(MAT_WIDTH * 0.35), MID_CARD_Y
@@ -652,7 +663,7 @@ class FYFGame(arcade.View):
             )
         )
         self.pile_text_list.append(
-            ("Public: hidden pile", pile.center_x - 50, pile.center_y, arcade.csscolor.DARK_GRAY, 10))
+            ("Hidden pile", pile.center_x - 50, pile.center_y, arcade.csscolor.DARK_GRAY, 10))
 
         pile = Mat(len(self.card_pile_list),
                      MAT_WIDTH, int(MAT_HEIGHT*0.3), arcade.csscolor.DARK_SLATE_GRAY)
@@ -716,18 +727,34 @@ class FYFGame(arcade.View):
         # draw text
         for text, x, y, color, size in self.pile_text_list:
             arcade.draw_text(text, x, y, color, size)
+        if self.game_state:
+            for player_index, x, y, color, size in self.player_name_display_list:
+                print(player_index)
+                print(self.game_state.player_name)
+                if player_index in self.game_state.player_name:
+                    arcade.draw_text(self.game_state.player_name[player_index], x, y, color, size)
+
 
         # Draw the cards
 
         for card_pile in self.card_pile_list[::-1]:
             card_pile.draw()
 
+    def connect(self):
+        new_event = gameutil.Event(type='Connect',
+                                   player_index=self.self_player_index,
+                                   player_name = self.player_name,
+                                   player_id = self.player_id
+                                   )
+        self.event_buffer.append(new_event)
+
     def on_key_press(self, symbol: int, modifiers: int):
          """ User presses key """
          if symbol == arcade.key.R:
              if modifiers & arcade.key.MOD_CTRL:
                 self.initiate_game_restart()
-
+         if symbol == arcade.key.C:
+                self.connect()
     def get_pile_index_for_card(self, card):
         """ What pile is this card in? """
 
@@ -765,18 +792,6 @@ class FYFGame(arcade.View):
                         #else:
                         self.flip_card(primary_card)
 
-    #def remove_card_from_pile(self, card):
-    #    """ Remove card from whatever pile it was in. """
-    #    for pile in self.piles:
-    #        if card in pile:
-    #            pile.remove(card)
-    #            break
-
-    #def move_card_to_new_pile(self, card, pile_index):
-    #    """ Move the card to a new pile """
-    #    self.remove_card_from_pile(card)
-    #    self.piles[pile_index].append(card)
-
     def move_cards(self, cards, new_pile_index):
         old_pile_index = self.get_pile_index_for_card(cards[0])
 
@@ -791,6 +806,7 @@ class FYFGame(arcade.View):
                                    )
         self.event_buffer.append(new_event)
         self.game_state.update_from_event(new_event)
+
     def flip_card(self, card):
         new_face=card.face_flipped()
 
@@ -919,20 +935,21 @@ def thread_receiver(window: FYFGame, server_ip: str):
 
 
 
-def main(player_index=None, n_player=None, server_ip=None):
+def main(args):
     """ Main method """
 
 
 
     window = arcade.Window(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
-    game_view = FYFGame()
-    game_view.setup(n_player=n_player, player_index=player_index)
+
+    game_view = FYFGame(args.player_name if args.player_name!='' else f'PLAYER {args.playerindex}')
+    game_view.setup(n_player=args.n_player, player_index=args.playerindex)
     window.show_view(game_view)
     #window.setup(n_player=6, player_index=player_index)
     thread1 = threading.Thread(
-        target=thread_pusher, args=(game_view,server_ip,), daemon=True)
+        target=thread_pusher, args=(game_view, args.server_ip,), daemon=True)
     thread2 = threading.Thread(
-        target=thread_receiver, args=(game_view,server_ip,), daemon=True)
+        target=thread_receiver, args=(game_view, args.server_ip,), daemon=True)
     thread1.start()
     thread2.start()
     arcade.run()
@@ -940,4 +957,5 @@ def main(player_index=None, n_player=None, server_ip=None):
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    main(args.playerindex, args.n_player, args.server_ip)
+    main(args)
+    #args.playerindex, args.n_player, args.player_name, args.server_ip)

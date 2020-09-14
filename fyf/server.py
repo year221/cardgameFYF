@@ -44,12 +44,6 @@ async def ticker(sock1, sock2):
     # A task to receive keyboard and mouse inputs from players.
     # This will also update the game state, gs.
     gs = gameutil.GameState(
-        n_pile=0,
-        cards_in_pile={},
-        cards_status = {},
-        n_player=6,
-        player_assignment={},
-        status='Game'
     )
     gs_buffer = []
     t = create_task(update_from_client(gs, gs_buffer, sock2))

@@ -16,7 +16,7 @@ class GameState:
     cards_status : Dict[int, str] = field(default_factory=dict)
     n_player: int = 0
     player_id: Dict[int, str] = field(default_factory=dict)
-    player_name = Dict[int, str] = field(default_factory=dict)
+    player_name : Dict[int, str] = field(default_factory=dict)
     status: str = 'Initialization'
 
     def to_json(self):
@@ -73,10 +73,12 @@ class GameState:
                 # send some card facedown
                 n_cards_distributed+=val
             self.status='New Game'
-        elif event.type == 'Connect':
-            self.player_name[event.player_index]= event.player_name
-            self.player_id[event.player_index] = event.player_id
             return [copy.deepcopy(self)]
+        elif event.type == 'Connect':
+            self.player_name.update({event.player_index: event.player_name})
+            self.player_id.update({event.player_index: event.player_id})
+            print(self)
+            return []
 
 
 
