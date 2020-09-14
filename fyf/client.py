@@ -125,13 +125,15 @@ class Card(arcade.Sprite):
         # Image to use for the sprite when face up
         self.image_file_name = None
         self._is_face_up = None
-        self.is_active = is_active
+        self._is_active = None
+
+
         super().__init__(self.image_file_name, scale)
         if code is not None:
             self.code = code
         else:
             self._change_value(value, face=='U')
-
+        self._is_active = is_active
 
 
     def _change_value(self, value=None, face_up=True):
@@ -158,18 +160,6 @@ class Card(arcade.Sprite):
         self.texture = arcade.load_texture(self.image_file_name)
         self._is_face_up = True
 
-    def switch_activation_status(self):
-        self.is_active = not self.is_active
-        if self.is_active:
-            self.color = COLOR_ACTIVE
-        else:
-            self.color = COLOR_INACTIVE
-
-
-    def swtich_to_active(self):
-        self.is_active = True
-        self.color = COLOR_ACTIVE
-
     def to_code(self):
         return self.value, 'U' if self._is_face_up else 'D'
 
@@ -192,6 +182,17 @@ class Card(arcade.Sprite):
             self.face_down()
 
     @property
+    def active(self):
+        return self._is_active
+    @active.setter
+    def active(self, x):
+        self._is_active = x
+        if self._is_active:
+            self.color = COLOR_ACTIVE
+        else:
+            self.color = COLOR_INACTIVE
+
+    @property
     def code(self):
         return self.value, 'U' if self._is_face_up else 'D'
     @code.setter
@@ -210,17 +211,6 @@ class Card(arcade.Sprite):
     def face_flipped(self):
         return 'D' if self._is_face_up else 'U'
 
-    @property
-    def active(self):
-        return self.is_active
-
-    @active.setter
-    def active(self, value):
-        self.is_active=value
-        if self.is_active:
-            self.color = COLOR_ACTIVE
-        else:
-            self.color = COLOR_INACTIVE
 
 
 def sort_cards(value_list, exclude_values=None):
@@ -330,6 +320,7 @@ class CardPile(arcade.SpriteList):
         self._cached_values = []
         self._cached_face_status = {}
         self.other_properties = copy.deepcopy(other_properties)
+        self.card_on_press = None
 
     def clear(self):
         self._cached_values = []
@@ -499,7 +490,10 @@ class FYFGame(arcade.View):
         # Original location of cards we are dragging with the mouse in case
         # they have to go back.
         self.held_cards_original_position = None
+        self.active_cards = None
+
         #self.held_cards_original_pile = None
+        self.card_on_press = None
 
         # Sprite list with all the mats tha cards lay on.
         self.pile_mat_list = None
@@ -515,7 +509,10 @@ class FYFGame(arcade.View):
         for card_pile in self.card_pile_list:
             card_pile.clear()
 
-
+        self.held_cards = []
+        self.held_cards_original_position=[]
+        self.active_cards = []
+        self.card_on_press = None
 
     def setup(self, n_player = 6, player_index=1, n_decks=6, n_residual_card=6):
         """ Set up the game here. Call this function to restart the game. """
@@ -528,6 +525,7 @@ class FYFGame(arcade.View):
         # List of cards we are dragging with the mouse
         self.held_cards = []
         self.held_cards_original_position=[]
+        self.active_cards = []
         self.card_pile_list = []
         #self.held_cards_original_pile = None
 
@@ -729,8 +727,6 @@ class FYFGame(arcade.View):
             arcade.draw_text(text, x, y, color, size)
         if self.game_state:
             for player_index, x, y, color, size in self.player_name_display_list:
-                print(player_index)
-                print(self.game_state.player_name)
                 if player_index in self.game_state.player_name:
                     arcade.draw_text(self.game_state.player_name[player_index], x, y, color, size)
 
@@ -765,7 +761,7 @@ class FYFGame(arcade.View):
 
     def on_mouse_press(self, x, y, button, key_modifiers):
         """ Called when the user presses a mouse button. """
-
+        self.card_on_press = None
         c_mats = arcade.get_sprites_at_point((x, y), self.pile_mat_list)
         if len(c_mats)>0:
             pile_index = c_mats[0].pile_position_in_card_pile_list
@@ -782,8 +778,28 @@ class FYFGame(arcade.View):
 
                     primary_card = cards[-1]
                     if button == arcade.MOUSE_BUTTON_LEFT:
-                        self.held_cards = [primary_card]
-                        self.held_cards_original_position = [self.held_cards[0].position]
+                        self.card_on_press = primary_card
+
+                        if not primary_card.active:
+
+                            if len(self.active_cards)>=1:
+                                # check if the pile being clicked on is the same as the active cards
+                                current_pile_index = self.get_pile_index_for_card(self.card_on_press)
+                                active_card_pile = self.get_pile_index_for_card(self.active_cards[0])
+
+                                if current_pile_index != active_card_pile:
+                                    # if the card being clicked on belongs to a different pile than those active cards. deactive other cards
+                                    for card in self.active_cards:
+                                        card.active = False
+                                    self.active_cards = []
+                            # will held this regardless whether its active
+                            self.held_cards.append(primary_card)
+                            self.held_cards_original_position.append(primary_card.position)
+
+                        # all active card will move together
+                        for card in self.active_cards:
+                             self.held_cards.append(card)
+                             self.held_cards_original_position.append(card.position)
 
                     elif button == arcade.MOUSE_BUTTON_RIGHT:
                         #if key_modifiers & arcade.key.MOD_CTRL:
@@ -791,6 +807,85 @@ class FYFGame(arcade.View):
                         #    self.card_pile_list[pile_index].sort_cards()
                         #else:
                         self.flip_card(primary_card)
+
+
+    def on_mouse_release(self, x: float, y: float, button: int,
+                         modifiers: int):
+        """ Called when the user presses a mouse button. """
+
+        # If we don't have any cards, who cares
+        #if len(self.card_on_press) == 0:
+        #    return
+        if self.card_on_press is None:
+            return
+        if button == arcade.MOUSE_BUTTON_RIGHT:
+            return
+
+        # Find the closest pile, in case we are in contact with more than one
+        new_pile, distance = get_minimum_distance_mat(self.card_on_press, self.pile_mat_list)
+
+
+
+        reset_position = True
+
+        # See if we are in contact with the closest pile
+        if arcade.check_for_collision(self.card_on_press, new_pile):
+
+            # What pile is it?
+            new_pile_index = new_pile.pile_position_in_card_pile_list#self.pile_mat_list.index(pile)
+
+
+            #  Is it the same pile we came from?
+            old_pile_index = self.get_pile_index_for_card(self.card_on_press)
+            if new_pile_index == old_pile_index:
+                cards = arcade.get_sprites_at_point((x, y), self.card_pile_list[new_pile_index])
+                if len(cards) >= 1:
+                    primary_card = cards[-1]
+                    print(f'press: {self.card_on_press.value}')
+                    if primary_card is not None:
+                        print(primary_card.value)
+                        if primary_card == self.card_on_press:
+                            # did not move position
+                            #for card_index, card in enumerate(self.held_cards):
+                            #    card.position = self.held_cards_original_position[card_index]
+                            #self.held_cards = []
+                            #self.held_cards_original_position = []
+                            # switch state
+                            if self.card_on_press.active:
+                                print(f'active: {self.card_on_press.active}')
+                                # if it wars active
+                                self.card_on_press.active = False
+                                self.active_cards.remove(self.card_on_press)
+                            else:
+                                self.card_on_press.active = True
+                                self.active_cards.append(self.card_on_press)
+                            self.card_on_press = None
+            else:
+                self.move_cards(self.held_cards, new_pile_index)
+                for card in self.active_cards:
+                    card.active = False
+                self.active_cards = []
+                # Success, don't reset position of cards
+                reset_position = False
+        print(f'reset: {reset_position}')
+        if reset_position:
+            # Where-ever we were dropped, it wasn't valid. Reset the each card's position
+            # to its original spot.
+            #with self._lock:
+            for card_index, card in enumerate(self.held_cards):
+                card.position = self.held_cards_original_position[card_index]
+
+        # We are no longer holding cards
+        self.held_cards = []
+        self.held_cards_original_position = []
+
+    def on_mouse_motion(self, x: float, y: float, dx: float, dy: float):
+        """ User moves mouse """
+
+        # If we are holding cards, move them with the mouse
+        for card in self.held_cards:
+            card.center_x += dx
+            card.center_y += dy
 
     def move_cards(self, cards, new_pile_index):
         old_pile_index = self.get_pile_index_for_card(cards[0])
@@ -819,6 +914,7 @@ class FYFGame(arcade.View):
         self.event_buffer.append(new_event)
         self.game_state.update_from_event(new_event)
         card.face= new_face
+
     def clear_a_pile(self, pile_index):
         if 'Clearable' in self.card_pile_list[pile_index].other_properties:
             if self.card_pile_list[pile_index].other_properties['Clearable']:
@@ -845,59 +941,7 @@ class FYFGame(arcade.View):
                                    face_down_pile = [self.n_player*3],
                                    )
         self.event_buffer.append(new_event)
-    def on_mouse_release(self, x: float, y: float, button: int,
-                         modifiers: int):
-        """ Called when the user presses a mouse button. """
 
-        # If we don't have any cards, who cares
-        if len(self.held_cards) == 0:
-            return
-
-        # Find the closest pile, in case we are in contact with more than one
-        new_pile, distance = get_minimum_distance_mat(self.held_cards[0], self.pile_mat_list)
-        #print(new_pile.index)
-        #print(distance)
-
-        reset_position = True
-
-        # See if we are in contact with the closest pile
-        if arcade.check_for_collision(self.held_cards[0], new_pile):
-
-            # What pile is it?
-            new_pile_index = new_pile.pile_position_in_card_pile_list#self.pile_mat_list.index(pile)
-
-            #  Is it the same pile we came from?
-            #print("rl")
-            #with self._lock:
-            old_pile_index = self.get_pile_index_for_card(self.held_cards[0])
-            if new_pile_index == old_pile_index:
-                # If so, who cares. We'll just reset our position.
-                pass
-            else:
-                self.move_cards(self.held_cards, new_pile_index)
-                # Success, don't reset position of cards
-                reset_position = False
-
-
-
-        if reset_position:
-            # Where-ever we were dropped, it wasn't valid. Reset the each card's position
-            # to its original spot.
-            #with self._lock:
-            for card_index, card in enumerate(self.held_cards):
-                card.position = self.held_cards_original_position[card_index]
-
-        # We are no longer holding cards
-        self.held_cards = []
-        self.held_cards_original_position = []
-
-    def on_mouse_motion(self, x: float, y: float, dx: float, dy: float):
-        """ User moves mouse """
-
-        # If we are holding cards, move them with the mouse
-        for card in self.held_cards:
-            card.center_x += dx
-            card.center_y += dy
 
 def thread_pusher(window: FYFGame, server_ip:str):
     ctx = Context()
@@ -925,6 +969,7 @@ def thread_receiver(window: FYFGame, server_ip: str):
     try:
         while True:
             gs_dict = sub_sock.recv_json(object_hook=gameutil.json_obj_hook)
+            #print(gs_dict)
             window.update_game_state(gs_dict)
             time.sleep(1 / UPDATE_TICK)
 
