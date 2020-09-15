@@ -11,9 +11,11 @@ import random
 import arcade
 import os
 import argparse
-import gameutil
+import gameutil, clientutil
+from clientutil import Mat, Card
 from arcade import gui
 import copy
+from dataclasses import asdict
 import uuid
 
 parser = argparse.ArgumentParser(description='Card client')
@@ -71,97 +73,7 @@ BOTTOM_SCORE_ROW_Y = (SCREEN_HEIGHT * 6) // 12
 
 PILE_SEPARATION_X =  CARD_WIDTH
 
-# Face down image
-FACE_DOWN_IMAGE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resources/images/cards/cardBack_red2.png")
-
 HAND_PILE = 0
-
-# COLOR
-COLOR_ACTIVE = (200,200,255)
-COLOR_INACTIVE = (255,255,255)
-
-# Card constants
-CARD_VALUES = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
-CARD_SUITS = ["Spades", "Hearts", "Clubs", "Diamonds", "Joker"]
-
-CARD_VALUE2SYMBOL = {CARD_VALUES[index]:index for index in range(len(CARD_VALUES))}
-CARD_SUITS2SYMBOL = {CARD_SUITS[index]:index for index in range(len(CARD_SUITS))}
-
-class Mat(arcade.SpriteSolidColor):
-    """ Mat for a card pile """
-
-    def __init__(self, pile_position_in_card_pile_list, *args, **kwargs):
-        """ Card constructor """
-
-        # Attributes for suit and value
-        super().__init__(*args, **kwargs)
-        # Image to use for the sprite when face up
-        self.pile_position_in_card_pile_list = pile_position_in_card_pile_list
-
-
-class Card(arcade.Sprite):
-    """ Card sprite """
-
-    def __init__(self, value=None, face=False, is_active=False, scale=1):
-        """ Card constructor """
-
-        # Attributes for suit and value
-        self._value = None
-        # Image to use for the sprite when face up
-        self.image_file_name = None
-        self._is_face_up = None
-        self._is_active = None
-        super().__init__(self.image_file_name, scale)
-        self.value = value
-        self.face = face
-        self._is_active = is_active
-
-    @property
-    def value(self):
-        return self._value
-    @value.setter
-    def value(self, x):
-        self._value = x
-        #self.image_file_name = value2card(x)
-        if x is None:
-            self.image_file_name = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resources/images/cards/cardBack_red2.png")
-        else:
-            self.image_file_name = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"resources/images/cards/card{CARD_SUITS[(x % 54)//13]}{CARD_VALUES[(x% 54)% 13]}.png")
-
-    @property
-    def face(self):
-        return 'U' if self._is_face_up else 'D'
-    @face.setter
-    def face(self, x):
-        if x == 'U':
-            self.texture = arcade.load_texture(self.image_file_name)
-            self._is_face_up = True
-        else:
-            self.texture = arcade.load_texture(FACE_DOWN_IMAGE)
-            self._is_face_up = False
-
-    def flip_face(self):
-        if self._is_face_up:
-            self.face = 'D'
-        else:
-            self.face = 'U'
-
-    def face_flipped(self):
-        return 'D' if self._is_face_up else 'U'
-
-    @property
-    def active(self):
-        return self._is_active
-    @active.setter
-    def active(self, x):
-        self._is_active = x
-        if self._is_active:
-            self.color = COLOR_ACTIVE
-        else:
-            self.color = COLOR_INACTIVE
-
-    #def code_face_flipped(self):
-    #    return self.value, 'D' if self._is_face_up else 'U'
 
 
 def sort_cards(value_list, exclude_values=None):
@@ -298,26 +210,7 @@ class CardPile(arcade.SpriteList):
         card_added_removed = set.union(cards_to_remove, cards_to_add)
         return card_added_removed
 
-# suporting fuction to localize mouse click
-def get_distance_to_mat(card, mat):
-    return math.sqrt(
-        max((abs(card.center_x - mat.center_x) - mat.width/2),0) **2 +
-        max((abs(card.center_y - mat.center_y) - mat.height / 2), 0) ** 2)
 
-def get_minimum_distance_mat(card, mat_list):
-    if len(mat_list)==0:
-        return None, None
-    else:
-        min_dist = get_distance_to_mat(card, mat_list[0])
-        min_index = 0
-        #print(f"mi: {0} di: {min_dist}")
-        for index, mat in enumerate(mat_list[1:], 1):
-            dist = get_distance_to_mat(card, mat)
-            #print(f"mi: {index} di: {dist}")
-            if dist < min_dist:
-                min_dist = dist
-                min_index = index
-    return mat_list[min_index], min_dist
 
 
 GAME_STATUS_RESET = -1
@@ -326,15 +219,26 @@ GAME_STATUS_ONGOING = 0
 SORT_BUTTON_WIDTH=100
 BUTTON_HEIGHT=20
 
-class FYFGame(arcade.View):
+class CardGame(arcade.Window):
+
+    def __init__(self, *arg, **kargs):
+        super().__init__(*arg, **kargs)
+        self.game_state = None
+        self.event_buffer = []
+
+    def update_game_state(self, gs_dict):
+        """ update game state from gs_dict """
+        # no GUI change is allowed in this function
+        self.game_state = gameutil.GameState(**gs_dict)
+
+class GameView(arcade.View):
     """ Main application class. """
 
     def __init__(self, player_name=None):
         super().__init__()
         self.ui_manager = gui.UIManager()
         arcade.set_background_color(arcade.color.AMAZON)
-        self.event_buffer = []
-        self.game_state = None
+
         self.player_id = str(uuid.uuid4())
         self.player_name = player_name
         self.player_name_display_list = None
@@ -343,8 +247,6 @@ class FYFGame(arcade.View):
         self.n_decks = None
         self.n_residual_card = None
         self.n_pile= None
-
-        ## list used to control moving cards
 
         # List of cards we are dragging with the mouse
         self.held_cards = None
@@ -361,6 +263,16 @@ class FYFGame(arcade.View):
         self.pile_text_list = None
         self.card_pile_list = None
 
+    @property
+    def game_state(self):
+        return self.window.game_state
+    @game_state.setter
+    def game_state(self, x):
+        self.window.game_state = x
+
+    @property
+    def event_buffer(self):
+        return self.window.event_buffer
 
     def clear_all_piles(self):
         """ clear all piles """
@@ -530,10 +442,10 @@ class FYFGame(arcade.View):
         self.pile_text_list.append(
             ("Public: all scored cards", pile.center_x - 50, pile.center_y, arcade.csscolor.DARK_GRAY, 10))
 
-    def update_game_state(self, gs_dict):
-        """ update game state from gs_dict """
-        # no GUI change is allowed in this function
-        self.game_state = gameutil.GameState(**gs_dict)
+    # def update_game_state(self, gs_dict):
+    #     """ update game state from gs_dict """
+    #     # no GUI change is allowed in this function
+    #     self.game_state = gameutil.GameState(**gs_dict)
 
     def on_update(self, delta_time):
         """ on update, which is called in the event loop."""
@@ -656,7 +568,7 @@ class FYFGame(arcade.View):
             return
 
         # Find the closest pile, in case we are in contact with more than one
-        new_pile, distance = get_minimum_distance_mat(self.card_on_press, self.pile_mat_list)
+        new_pile, distance = clientutil.get_minimum_distance_mat(self.card_on_press, self.pile_mat_list)
         reset_position = True
 
         # See if we are in contact with the closest pile
@@ -772,7 +684,7 @@ class FYFGame(arcade.View):
         self.event_buffer.append(new_event)
 
 
-def thread_pusher(window: FYFGame, server_ip:str):
+def thread_pusher(window: CardGame, server_ip:str):
     ctx = Context()
     push_sock: Socket = ctx.socket(zmq.PUSH)
     push_sock.connect(f'tcp://{server_ip}:25001')
@@ -780,7 +692,7 @@ def thread_pusher(window: FYFGame, server_ip:str):
         while True:
             if window.event_buffer:
                 d = window.event_buffer.pop()
-                msg = dict(counter=1, event=d.asdict())
+                msg = dict(counter=1, event=asdict(d))
                 print(msg)
                 push_sock.send_json(msg)
             time.sleep(1 / UPDATE_TICK)
@@ -790,7 +702,7 @@ def thread_pusher(window: FYFGame, server_ip:str):
         ctx.destroy(linger=1)
 
 
-def thread_receiver(window: FYFGame, server_ip: str):
+def thread_receiver(window: CardGame, server_ip: str):
     ctx = Context()
     sub_sock: Socket = ctx.socket(zmq.SUB)
     sub_sock.connect(f'tcp://{server_ip}:25000')
@@ -808,15 +720,15 @@ def thread_receiver(window: FYFGame, server_ip: str):
 def main(args):
     """ Main method """
 
-    window = arcade.Window(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, resizable=True)
+    window = CardGame(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, resizable=True)
 
-    game_view = FYFGame(args.player_name if args.player_name!='' else f'PLAYER {args.playerindex}')
+    game_view = GameView(args.player_name if args.player_name!='' else f'PLAYER {args.playerindex}')
     game_view.setup(n_player=args.n_player, player_index=args.playerindex)
     window.show_view(game_view)
     thread1 = threading.Thread(
-        target=thread_pusher, args=(game_view, args.server_ip,), daemon=True)
+        target=thread_pusher, args=(window, args.server_ip,), daemon=True)
     thread2 = threading.Thread(
-        target=thread_receiver, args=(game_view, args.server_ip,), daemon=True)
+        target=thread_receiver, args=(window, args.server_ip,), daemon=True)
     thread1.start()
     thread2.start()
     arcade.run()
