@@ -21,15 +21,6 @@ class GameState:
 
     def to_json(self):
         d = asdict(self)
-        # dict(
-        #     n_pile=self.n_pile,
-        #     cards_in_pile=self.cards_in_pile,
-        #     cards_status=self.cards_status,
-        #     n_player=self.n_player,
-        #     player_assignment=self.player_assignment,
-        #     status=self.status
-        # )
-         #print(d)
         return json.dumps(d)
 
     def update_from_event(self, event):
@@ -84,12 +75,38 @@ class GameState:
 
 
 @dataclass
+class EventCardChange:
+    type: str
+    player_index: int = -1
+    src_pile: int = -1
+    dst_pile: int = -1
+    cards: List[int] = field(default_factory=list)
+    cards_status: Dict[int, str] = field(default_factory=dict)
+    player_id : str = ''
+
+@dataclass
+class EventGameControl:
+    type: str
+    n_player : int = 6
+    n_card_per_pile : Dict[int, int] = field(default_factory=dict)
+    n_pile : int = 19
+    face_down_pile : List[int] = field(default_factory=list)
+    player_id: str = ''
+
+@dataclass
+class EventConnect:
+    type: str
+    player_name : str = ''
+    player_id : str = ''
+
+
+@dataclass
 class Event:
     type: str
     player_index: int = -1
     src_pile: int = -1
     dst_pile: int = -1
-    cards: List[int] = field(default_factory=list)#Tuple[int, str]] = []
+    cards: List[int] = field(default_factory=list)
     cards_status: Dict[int, str] = field(default_factory=dict)
     n_player : int = 6
     n_card_per_pile : Dict[int, int] = field(default_factory=dict)
@@ -98,13 +115,3 @@ class Event:
     player_name : str = ''
     player_id : str = ''
 
-    def to_dict(self):
-         return asdict(self)
-    #     return dict(
-    #         type=self.type,
-    #         player_index=self.player_index,
-    #         src_pile=self.src_pile,
-    #         dst_pile=self.dst_pile,
-    #         cards=self.cards,
-    #         cards_status=self.cards_status
-    #     )
