@@ -12,7 +12,6 @@ import arcade
 import os
 import argparse
 import gameutil
-#import GameState, Event
 from arcade import gui
 import copy
 import uuid
@@ -781,7 +780,7 @@ def thread_pusher(window: FYFGame, server_ip:str):
         while True:
             if window.event_buffer:
                 d = window.event_buffer.pop()
-                msg = dict(counter=1, event=d.to_dict())
+                msg = dict(counter=1, event=d.asdict())
                 print(msg)
                 push_sock.send_json(msg)
             time.sleep(1 / UPDATE_TICK)
@@ -809,7 +808,7 @@ def thread_receiver(window: FYFGame, server_ip: str):
 def main(args):
     """ Main method """
 
-    window = arcade.Window(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
+    window = arcade.Window(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, resizable=True)
 
     game_view = FYFGame(args.player_name if args.player_name!='' else f'PLAYER {args.playerindex}')
     game_view.setup(n_player=args.n_player, player_index=args.playerindex)
