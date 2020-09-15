@@ -75,6 +75,32 @@ class GameState:
 
 
 @dataclass
+class EventCardChange:
+    type: str
+    player_index: int = -1
+    src_pile: int = -1
+    dst_pile: int = -1
+    cards: List[int] = field(default_factory=list)
+    cards_status: Dict[int, str] = field(default_factory=dict)
+    player_id : str = ''
+
+@dataclass
+class EventGameControl:
+    type: str
+    n_player : int = 6
+    n_card_per_pile : Dict[int, int] = field(default_factory=dict)
+    n_pile : int = 19
+    face_down_pile : List[int] = field(default_factory=list)
+    player_id: str = ''
+
+@dataclass
+class EventConnect:
+    type: str
+    player_name : str = ''
+    player_id : str = ''
+
+
+@dataclass
 class Event:
     type: str
     player_index: int = -1
@@ -89,5 +115,3 @@ class Event:
     player_name : str = ''
     player_id : str = ''
 
-    def to_dict(self):
-         return asdict(self)
