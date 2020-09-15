@@ -88,17 +88,6 @@ CARD_SUITS = ["Spades", "Hearts", "Clubs", "Diamonds", "Joker"]
 CARD_VALUE2SYMBOL = {CARD_VALUES[index]:index for index in range(len(CARD_VALUES))}
 CARD_SUITS2SYMBOL = {CARD_SUITS[index]:index for index in range(len(CARD_SUITS))}
 
-#def card2int(suit, value):
-#    return CARD_SUITS2SYMBOL[suit]*13+ CARD_VALUE2SYMBOL[value]
-
-# def value2card(x):
-#     if x is None:
-#         return os.path.join(os.path.dirname(os.path.abspath(__file__)), "resources/images/cards/cardBack_red2.png")
-#     else:
-#         return os.path.join(os.path.dirname(os.path.abspath(__file__)), f"resources/images/cards/card{CARD_SUITS[(x % 54)//13]}{CARD_VALUES[(x% 54)% 13]}.png")
-#def int2card(x):
-#    return CARD_SUITS[(x % 54)//13], CARD_VALUES[x%13]
-
 class Mat(arcade.SpriteSolidColor):
     """ Mat for a card pile """
 
@@ -208,8 +197,8 @@ COM_TO_SERVER_NOUPDATE = 0
 COM_FROM_SERVER_UPDATE = 1
 COM_FROM_SERVER_NOUPDATE = 0
 
-
 SORT_BY_SUIT=1
+
 class CardPile(arcade.SpriteList):
     """ Card sprite """
 
@@ -226,7 +215,6 @@ class CardPile(arcade.SpriteList):
         self._cached_values = []
         self._cached_face_status = {}
         self.other_properties = copy.deepcopy(other_properties)
-        # contrl card to be moved
 
     def clear(self):
         """ clear entire pile"""
@@ -286,11 +274,9 @@ class CardPile(arcade.SpriteList):
     def from_value_face(self, value_list, face_status_dict):
         """ update pile based on value list and face status dictionary"""
         # update pile based on new value list and face status dict
-        #code_list = [tuple(w) for w in code_list]
         cards_to_remove = set(self._cached_values) - set(value_list)
         cards_to_add = set(value_list) - set(self._cached_values)
-
-        cards_to_flip = dict(set(self._cached_face_status.items())-set(face_status_dict.items()))#[key for key, val in self._cached_face_status if (key in face_status_dict) and face_status_dict[key]!=val]
+        cards_to_flip = dict(set(self._cached_face_status.items())-set(face_status_dict.items()))
 
         if cards_to_remove or cards_to_flip or cards_to_add:
             self._cached_values = value_list
@@ -628,7 +614,6 @@ class FYFGame(arcade.View):
             elif button == arcade.MOUSE_BUTTON_RIGHT and (key_modifiers & arcade.key.MOD_CTRL):
                 self.clear_a_pile(pile_index)
             else:
-                #if self.card_pile_list[pile_index].can_remove_card:
                 cards = arcade.get_sprites_at_point((x, y), self.card_pile_list[pile_index])
                 if len(cards) > 0:
 
@@ -687,14 +672,11 @@ class FYFGame(arcade.View):
                 cards = arcade.get_sprites_at_point((x, y), self.card_pile_list[new_pile_index])
                 if len(cards) >= 1:
                     primary_card = cards[-1]
-                    #print(f'press: {self.card_on_press.value}')
                     if primary_card is not None:
-                        #print(primary_card.value)
                         if primary_card == self.card_on_press:
                             # did not move position
                             if self.card_on_press.active:
-                                #print(f'active: {self.card_on_press.active}')
-                                # if it wars active
+                                # if it were active
                                 self.card_on_press.active = False
                                 self.active_cards.remove(self.card_on_press)
                             else:
@@ -708,11 +690,9 @@ class FYFGame(arcade.View):
                 self.active_cards = []
                 # Success, don't reset position of cards
                 reset_position = False
-        #print(f'reset: {reset_position}')
         if reset_position:
             # Where-ever we were dropped, it wasn't valid. Reset the each card's position
             # to its original spot.
-            #with self._lock:
             for card_index, card in enumerate(self.held_cards):
                 card.position = self.held_cards_original_position[card_index]
 
