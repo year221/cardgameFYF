@@ -91,11 +91,11 @@ CARD_SUITS2SYMBOL = {CARD_SUITS[index]:index for index in range(len(CARD_SUITS))
 #def card2int(suit, value):
 #    return CARD_SUITS2SYMBOL[suit]*13+ CARD_VALUE2SYMBOL[value]
 
-def value2card(x):
-    if x is None:
-        return os.path.join(os.path.dirname(os.path.abspath(__file__)), "resources/images/cards/cardBack_red2.png")
-    else:
-        return os.path.join(os.path.dirname(os.path.abspath(__file__)), f"resources/images/cards/card{CARD_SUITS[(x % 54)//13]}{CARD_VALUES[(x% 54)% 13]}.png")
+# def value2card(x):
+#     if x is None:
+#         return os.path.join(os.path.dirname(os.path.abspath(__file__)), "resources/images/cards/cardBack_red2.png")
+#     else:
+#         return os.path.join(os.path.dirname(os.path.abspath(__file__)), f"resources/images/cards/card{CARD_SUITS[(x % 54)//13]}{CARD_VALUES[(x% 54)% 13]}.png")
 #def int2card(x):
 #    return CARD_SUITS[(x % 54)//13], CARD_VALUES[x%13]
 
@@ -109,67 +109,36 @@ class Mat(arcade.SpriteSolidColor):
         super().__init__(*args, **kwargs)
         # Image to use for the sprite when face up
         self.pile_position_in_card_pile_list = pile_position_in_card_pile_list
-        #self.text= text
-    #def draw(self):
-    #    super().draw()
-    #    print('drawing')
+
 
 class Card(arcade.Sprite):
     """ Card sprite """
 
-    def __init__(self, code = None, value=None, face=False, is_active=False, scale=1):
+    def __init__(self, value=None, face=False, is_active=False, scale=1):
         """ Card constructor """
 
         # Attributes for suit and value
-        self.value = None
+        self._value = None
         # Image to use for the sprite when face up
         self.image_file_name = None
         self._is_face_up = None
         self._is_active = None
-
-
         super().__init__(self.image_file_name, scale)
-        if code is not None:
-            self.code = code
-        else:
-            self._change_value(value, face=='U')
+        self.value = value
+        self.face = face
         self._is_active = is_active
 
-
-    def _change_value(self, value=None, face_up=True):
-        self.value=value
-        self.image_file_name = value2card(value)
-        if face_up:
-            self.face_up()
+    @property
+    def value(self):
+        return self._value
+    @value.setter
+    def value(self, x):
+        self._value = x
+        #self.image_file_name = value2card(x)
+        if x is None:
+            self.image_file_name = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resources/images/cards/cardBack_red2.png")
         else:
-            self.face_down()
-
-    def flip_face(self):
-        if self._is_face_up:
-            self.face_down()
-        else:
-            self.face_up()
-
-    def face_down(self):
-        """ Turn card face-down """
-        self.texture = arcade.load_texture(FACE_DOWN_IMAGE)
-        self._is_face_up = False
-
-    def face_up(self):
-        """ Turn card face-up """
-        self.texture = arcade.load_texture(self.image_file_name)
-        self._is_face_up = True
-
-    def to_code(self):
-        return self.value, 'U' if self._is_face_up else 'D'
-
-    def update_from_code(self, code):
-        if code[1]=='U':
-            self.face_up()
-        else:
-            self.face_down()
-        self.value = code[0]
-        self.image_file_name = value2card(self.value)
+            self.image_file_name = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"resources/images/cards/card{CARD_SUITS[(x % 54)//13]}{CARD_VALUES[(x% 54)% 13]}.png")
 
     @property
     def face(self):
@@ -177,9 +146,20 @@ class Card(arcade.Sprite):
     @face.setter
     def face(self, x):
         if x == 'U':
-            self.face_up()
+            self.texture = arcade.load_texture(self.image_file_name)
+            self._is_face_up = True
         else:
-            self.face_down()
+            self.texture = arcade.load_texture(FACE_DOWN_IMAGE)
+            self._is_face_up = False
+
+    def flip_face(self):
+        if self._is_face_up:
+            self.face = 'D'
+        else:
+            self.face = 'U'
+
+    def face_flipped(self):
+        return 'D' if self._is_face_up else 'U'
 
     @property
     def active(self):
@@ -192,74 +172,12 @@ class Card(arcade.Sprite):
         else:
             self.color = COLOR_INACTIVE
 
-    @property
-    def code(self):
-        return self.value, 'U' if self._is_face_up else 'D'
-    @code.setter
-    def code(self, x):
-        self.value = x[0]
-        self.image_file_name = value2card(self.value)
-        #print((self.value, self.image_file_name))
-        if x[1]=='U':
-            self.face_up()
-        else:
-            self.face_down()
-
-
     #def code_face_flipped(self):
     #    return self.value, 'D' if self._is_face_up else 'U'
-    def face_flipped(self):
-        return 'D' if self._is_face_up else 'U'
-
 
 
 def sort_cards(value_list, exclude_values=None):
     return [w[0] for w in sorted([(w, (w % 54)) for w in value_list], key=lambda x: x[1])]
-
-    #return sorted([w for w in int_list if w not in exclude_values]) + sorted([w for w in int_list if w in exclude_values])
-
-def sort_card_codes(code_list):
-    return [s[0] for s in sorted([((w, card_attr), (w % 54)) for w, card_attr in code_list], key=lambda x: x[1])]
-
-#def card_list_to_attr_value_list():
-#    return [(w.value, 'U' if w.is_face_up else 'D') for w in card_list]
-
-
-def card_list_to_int_list(card_list):
-    return [w.value for w in card_list]
-    #return [card2int(card.suit, card.value) for card in card_list]
-
-# def update_cards_from_int(card_list, value_list, starting_x, starting_y, max_x, step_x, step_y, scale=CARD_SCALE):
-#     sorted_value_list = sort_cards(value_list)
-#     c_card_ints = card_list_to_int_list(card_list)
-#     if set(c_card_ints) == set(value_list):
-#         # if the cards are the same then there is no update
-#         return
-#     else:
-#         while card_list:
-#             card_list.pop()
-#         card_x = starting_x
-#         card_y = starting_y
-#         for w in sorted_value_list:
-#             card = Card(w, scale=scale)
-#             card.position = card_x, card_y
-#             card_x = card_x + step_x
-#             if card_x >= max_x:
-#                 card_x = starting_x
-#                 card_y = card_y -  step_y
-#             card_list.append(card)
-
-
-def arrange_positions(card_list, starting_x, starting_y, max_x, step_x, step_y):
-    card_x = starting_x
-    card_y = starting_y
-    for card in card_list:
-        card.position = card_x, card_y
-        card_x = card_x + step_x
-        if card_x >= max_x:
-            card_x = starting_x
-            card_y = card_y - step_y
-
 
 def calculate_main_pile_positions(player_index, n_player, self_player_index=None):
     if self_player_index is None:
@@ -299,30 +217,19 @@ class CardPile(arcade.SpriteList):
         """ Card constructor """
 
         super().__init__( *args, **kwargs)
-        #if can_remove_card is None:
-        #    self.can_remove_card = False
-        #else:
-        #    self.can_remove_card = can_remove_card
-
-        #if can_add_card is None:
-        #    self.can_add_card = False
-        #else:
-        #    self.can_add_card = can_add_card
         self.card_pile_id=card_pile_id
         self.mat_center = mat_center
         self.card_start_x, self.card_start_y= mat_center[0] - mat_size[0]//2 + mat_boundary[0], mat_center[1] + mat_size[1]//2 - mat_boundary[1]
         self.card_max_x = mat_center[0] + mat_size[0]//2 - mat_boundary[0]
         self.step_x, self.step_y = int(card_offset[0]), int(card_offset[1])
         self.card_scale = card_scale
-        #self.to_server_type=to_server_type
-        #self.from_server_type=from_server_type
-        #self._cached_codes = []
         self._cached_values = []
         self._cached_face_status = {}
         self.other_properties = copy.deepcopy(other_properties)
-        self.card_on_press = None
+        # contrl card to be moved
 
     def clear(self):
+        """ clear entire pile"""
         self._cached_values = []
         self._cached_face_status = {}
         while self.__len__() > 0:
@@ -349,13 +256,14 @@ class CardPile(arcade.SpriteList):
         self._cached_face_status[card.value]=card.face
 
     def to_valuelist(self):
+        """ export as value list"""
         return [w.value for w in self]
 
     def to_face_staus(self):
+        """ export as dictionary"""
         return {w.value:w.face for w in self}
 
-    #def to_code(self):
-    #    return [w.to_code() for w in self]
+
 
     def remove_card(self, card):
         self.remove(card)
@@ -363,7 +271,7 @@ class CardPile(arcade.SpriteList):
         self._cached_face_status.pop(card.value)
         #self._cached_codes.remove(card.code)
 
-    def sort_cards(self, sorting_rule = SORT_BY_SUIT):
+    def sort_cards(self, sorting_rule=SORT_BY_SUIT):
         """ sort cards based on certain order
 
         :param sorting_rule:
@@ -375,8 +283,8 @@ class CardPile(arcade.SpriteList):
             for card, _ in sorted_cards:
                 self.add_card(card)
 
-
     def from_value_face(self, value_list, face_status_dict):
+        """ update pile based on value list and face status dictionary"""
         # update pile based on new value list and face status dict
         #code_list = [tuple(w) for w in code_list]
         cards_to_remove = set(self._cached_values) - set(value_list)
@@ -405,52 +313,13 @@ class CardPile(arcade.SpriteList):
         card_added_removed = set.union(cards_to_remove, cards_to_add)
         return card_added_removed
 
-    # def from_code(self, code_list):
-    #     code_list = [tuple(w) for w in code_list]
-    #     card_to_change = set(self._cached_codes) - set(code_list)
-    #     card_to_add = [w for w in code_list if w not in self._cached_codes]
-    #
-    #     if (not card_to_change) and (not card_to_add):
-    #         return
-    #     else:
-    #         if card_to_change:
-    #             cards_to_remove = []
-    #             for card in self:
-    #                 if card.code in card_to_change:
-    #                     code_if_flipped = card.code_face_flipped()
-    #                     if code_if_flipped in card_to_add:
-    #                         # flip the card
-    #                         card_to_add.remove(code_if_flipped)
-    #                         card.flip_face()
-    #                     else:
-    #                         # add card to be removed
-    #                         self.remove_card(card)
-    #             for card in cards_to_remove:
-    #                 self.remove(card)
-    #         for code in card_to_add:
-    #             self.add_card(Card(code=code))
-
-
-    #def sort_cards(self):
-    #    arrange_positions(self, self.card_start_x, self.card_start_y, self.card_max_x, self.step_x, self.step_y)
-
-    #def update_cards(self, int_list):
-    #    update_cards_from_int(self, int_list, self.card_start_x, self.card_start_y, self.card_max_x, self.step_x, self.step_y, self.card_scale)
-
-
+# suporting fuction to localize mouse click
 def get_distance_to_mat(card, mat):
-    #print(f"mx: {mat.cente_x} my {mat.center_y}")
-    #print(f"x: {mat.center_x}, y:{mat.center_y}")
     return math.sqrt(
         max((abs(card.center_x - mat.center_x) - mat.width/2),0) **2 +
         max((abs(card.center_y - mat.center_y) - mat.height / 2), 0) ** 2)
-        #(0 if abs(card.center_x-mat.center_x) <= mat.width else min((card.center_x - mat.center_x - mat.width/2) ** 2, (card.center_x - mat.center_x + mat.width/2) ** 2))+
-        #(0 if abs(card.center_y - mat.center_y) <= mat.width else min(
-        #    (card.center_y - mat.center_y - mat.width / 2) ** 2, (card.center_y - mat.center_y + mat.width / 2) ** 2)) )
-
 
 def get_minimum_distance_mat(card, mat_list):
-    #print(f"cx: {card.center_x} cy {card.center_y}")
     if len(mat_list)==0:
         return None, None
     else:
@@ -471,42 +340,45 @@ GAME_STATUS_ONGOING = 0
 
 SORT_BUTTON_WIDTH=100
 BUTTON_HEIGHT=20
+
 class FYFGame(arcade.View):
     """ Main application class. """
 
     def __init__(self, player_name=None):
-        super().__init__()#SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
+        super().__init__()
         self.ui_manager = gui.UIManager()
         arcade.set_background_color(arcade.color.AMAZON)
+        self.event_buffer = []
+        self.game_state = None
+        self.player_id = str(uuid.uuid4())
+        self.player_name = player_name
+        self.player_name_display_list = None
         self.n_player = None
         self.self_player_index = None
         self.n_decks = None
         self.n_residual_card = None
         self.n_pile= None
-        #self._lock = threading.Lock()
+
+        ## list used to control moving cards
 
         # List of cards we are dragging with the mouse
         self.held_cards = None
-
         # Original location of cards we are dragging with the mouse in case
         # they have to go back.
         self.held_cards_original_position = None
+        # active cards
         self.active_cards = None
-
-        #self.held_cards_original_pile = None
+        # card that was pressed on
         self.card_on_press = None
 
         # Sprite list with all the mats tha cards lay on.
         self.pile_mat_list = None
         self.pile_text_list = None
         self.card_pile_list = None
-        self.event_buffer = []
-        self.game_state = None
-        self.player_id = str(uuid.uuid4())
-        self.player_name = player_name
-        self.player_name_display_list = None
+
 
     def clear_all_piles(self):
+        """ clear all piles """
         for card_pile in self.card_pile_list:
             card_pile.clear()
 
@@ -572,10 +444,6 @@ class FYFGame(arcade.View):
             ("CLRT + R to reset the game", starting_x, starting_y-step_y*4, arcade.csscolor.GOLD,
              15))
 
-
-        #print(hand_pile_mat.right)
-        #print(hand_pile_mat.bottom)
-
         # button = gui.UIFlatButton(
         #     'sort',
         #     center_x=int(hand_pile_mat.right-SORT_BUTTON_WIDTH//2),
@@ -585,9 +453,6 @@ class FYFGame(arcade.View):
         # )
         #self.ui_manager.add_ui_element(button)
 
-        #output_card_pile = arcade.SpriteSolidColor(MAT_WIDTH, MAT_HEIGHT, arcade.csscolor.DARK_OLIVE_GREEN)
-        #output_card_pile.position = int(SCREEN_WIDTH/2), int(HAND_MAT_Y+HAND_MAT_HEIGHT/2+MAT_HEIGHT)
-        #self.pile_mat_list.append(output_card_pile)
         # main output piles for each player
         starting_index_output_pile = self.n_player
         for player_index in range(self.n_player):
@@ -611,9 +476,6 @@ class FYFGame(arcade.View):
             if player_index == self.self_player_index:
                 self.pile_text_list.append(
                     ('Lay your card here', pile.center_x-50, pile.center_y, arcade.color.DARK_GRAY, 10))
-            #else:
-            #    self.pile_text_list.append(
-            #        ("Public: Other's card", pile.center_x-50, pile.center_y, arcade.color.DARK_GRAY, 10))
 
             self.player_name_display_list.append(
                 (player_index, pile.center_x - 50, pile.center_y-20, arcade.color.DARK_GRAY, 10)
@@ -682,37 +544,29 @@ class FYFGame(arcade.View):
         )
         self.pile_text_list.append(
             ("Public: all scored cards", pile.center_x - 50, pile.center_y, arcade.csscolor.DARK_GRAY, 10))
-        #self.card_pile_list[0].from_code(sort_card_codes(list(zip(list(range(108)), ['U']*108))))
-
-        #print(self.card_pile_list[0].to_code())
 
     def update_game_state(self, gs_dict):
+        """ update game state from gs_dict """
+        # no GUI change is allowed in this function
         self.game_state = gameutil.GameState(**gs_dict)
 
-    #def update_status(self, card_dict):
-        #print("us")
-        #with self._lock:
-
-
-
     def on_update(self, delta_time):
-        #print(self.game_state)
+        """ on update, which is called in the event loop."""
         if self.game_state:
-            #print(self.game_state.cards_in_pile.keys())
             if self.game_state.status=='New Game':
 
                 self.game_state.status='Game'
                 self.clear_all_piles()
-            #print(self.game_state.status)
-            #all_card_changed_removed = set()
             held_cards_value = [w.value for w in self.held_cards]
             active_cards_value = [w.value for w in self.active_cards]
+            # update piles
             for w in self.card_pile_list:
-                #if w.from_server_type==COM_FROM_SERVER_UPDATE:
-                # check whether hand-held cards affected
                 if (w.card_pile_id) in self.game_state.cards_in_pile:
-                    #print(self.game_state.cards_in_pile[(w.card_pile_id)])
+                    # update card
                     card_changed_removed = w.from_value_face(self.game_state.cards_in_pile[w.card_pile_id], self.game_state.cards_status)
+
+                    # check whether hand-held cards affected
+
                     for card_value in card_changed_removed:
                         if card_value in held_cards_value:
                             index = held_cards_value.index(card_value)
@@ -727,16 +581,9 @@ class FYFGame(arcade.View):
                             self.active_cards[index].active = False
                             self.active_cards.remove(self.active_cards[index])
                             self.active_cards_value.remove(self.active_cards_value[index])
-                    #all_card_changed_removed = set.union(all_card_changed_removed, card_changed_removed)
-
-
-                #w.from_code(self.game_state.cards_in_pile[(w.card_pile_id)])
 
     def on_draw(self):
         """ Render the screen. """
-        #(".")
-        # Clear the screen
-        #with self._lock:
         arcade.start_render()
 
         # Draw the mats the cards go on to
@@ -749,20 +596,9 @@ class FYFGame(arcade.View):
             for player_index, x, y, color, size in self.player_name_display_list:
                 if player_index in self.game_state.player_name:
                     arcade.draw_text(self.game_state.player_name[player_index], x, y, color, size)
-
-
         # Draw the cards
-
         for card_pile in self.card_pile_list[::-1]:
             card_pile.draw()
-
-    def connect(self):
-        new_event = gameutil.Event(type='Connect',
-                                   player_index=self.self_player_index,
-                                   player_name = self.player_name,
-                                   player_id = self.player_id
-                                   )
-        self.event_buffer.append(new_event)
 
     def on_key_press(self, symbol: int, modifiers: int):
          """ User presses key """
@@ -822,10 +658,6 @@ class FYFGame(arcade.View):
                              self.held_cards_original_position.append(card.position)
 
                     elif button == arcade.MOUSE_BUTTON_RIGHT:
-                        #if key_modifiers & arcade.key.MOD_CTRL:
-                            # with control, sort current piles
-                        #    self.card_pile_list[pile_index].sort_cards()
-                        #else:
                         self.flip_card(primary_card)
 
 
@@ -834,8 +666,6 @@ class FYFGame(arcade.View):
         """ Called when the user presses a mouse button. """
 
         # If we don't have any cards, who cares
-        #if len(self.card_on_press) == 0:
-        #    return
         if self.card_on_press is None:
             return
         if button == arcade.MOUSE_BUTTON_RIGHT:
@@ -843,9 +673,6 @@ class FYFGame(arcade.View):
 
         # Find the closest pile, in case we are in contact with more than one
         new_pile, distance = get_minimum_distance_mat(self.card_on_press, self.pile_mat_list)
-
-
-
         reset_position = True
 
         # See if we are in contact with the closest pile
@@ -853,7 +680,6 @@ class FYFGame(arcade.View):
 
             # What pile is it?
             new_pile_index = new_pile.pile_position_in_card_pile_list#self.pile_mat_list.index(pile)
-
 
             #  Is it the same pile we came from?
             old_pile_index = self.get_pile_index_for_card(self.card_on_press)
@@ -866,11 +692,6 @@ class FYFGame(arcade.View):
                         #print(primary_card.value)
                         if primary_card == self.card_on_press:
                             # did not move position
-                            #for card_index, card in enumerate(self.held_cards):
-                            #    card.position = self.held_cards_original_position[card_index]
-                            #self.held_cards = []
-                            #self.held_cards_original_position = []
-                            # switch state
                             if self.card_on_press.active:
                                 #print(f'active: {self.card_on_press.active}')
                                 # if it wars active
@@ -906,6 +727,15 @@ class FYFGame(arcade.View):
         for card in self.held_cards:
             card.center_x += dx
             card.center_y += dy
+
+    ## supporting functions to send out events
+    def connect(self):
+        new_event = gameutil.Event(type='Connect',
+                                   player_index=self.self_player_index,
+                                   player_name = self.player_name,
+                                   player_id = self.player_id
+                                   )
+        self.event_buffer.append(new_event)
 
     def move_cards(self, cards, new_pile_index):
         old_pile_index = self.get_pile_index_for_card(cards[0])
@@ -989,7 +819,6 @@ def thread_receiver(window: FYFGame, server_ip: str):
     try:
         while True:
             gs_dict = sub_sock.recv_json(object_hook=gameutil.json_obj_hook)
-            #print(gs_dict)
             window.update_game_state(gs_dict)
             time.sleep(1 / UPDATE_TICK)
 
@@ -997,20 +826,14 @@ def thread_receiver(window: FYFGame, server_ip: str):
         sub_sock.close(1)
         ctx.destroy(linger=1)
 
-
-
-
 def main(args):
     """ Main method """
-
-
 
     window = arcade.Window(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
 
     game_view = FYFGame(args.player_name if args.player_name!='' else f'PLAYER {args.playerindex}')
     game_view.setup(n_player=args.n_player, player_index=args.playerindex)
     window.show_view(game_view)
-    #window.setup(n_player=6, player_index=player_index)
     thread1 = threading.Thread(
         target=thread_pusher, args=(game_view, args.server_ip,), daemon=True)
     thread2 = threading.Thread(
@@ -1023,4 +846,3 @@ def main(args):
 if __name__ == "__main__":
     args = parser.parse_args()
     main(args)
-    #args.playerindex, args.n_player, args.player_name, args.server_ip)
