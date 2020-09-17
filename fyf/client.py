@@ -14,17 +14,18 @@ import argparse
 import gameutil, clientutil
 from clientutil import Mat, Card
 from arcade import gui
+from arcade.gui import UIEvent, TEXT_INPUT,UIInputBox
 import copy
 from dataclasses import asdict
 import uuid
 
 parser = argparse.ArgumentParser(description='Card client')
 
-parser.add_argument('playerindex', type=int,
-                    help='player index')
+#parser.add_argument('playerindex', type=int,
+#                    help='player index')
 
-parser.add_argument('-p', dest='player_name', type=str, help='your name to be displayed', default='')
-parser.add_argument('-n', dest='n_player', type=int, help='number of player', default=6)
+#parser.add_argument('-p', dest='player_name', type=str, help='your name to be displayed', default='')
+#parser.add_argument('-n', dest='n_player', type=int, help='number of player', default=6)
 parser.add_argument('-u', dest='server_ip', type=str, help='server ip', default='162.243.211.250')
 # Network
 UPDATE_TICK = 30
@@ -231,16 +232,132 @@ class CardGame(arcade.Window):
         # no GUI change is allowed in this function
         self.game_state = gameutil.GameState(**gs_dict)
 
-class GameView(arcade.View):
-    """ Main application class. """
+class GameFlatButton(arcade.gui.UIFlatButton):
+    """
+    To capture a button click, subclass the button and override on_click.
+    """
+    def __init__(self, click_event, *arg, **kargs):
+        super().__init__(*arg, **kargs)
+        self.click_event = click_event
 
-    def __init__(self, player_name=None):
+    def on_click(self):
+        """ Called when user lets off button """
+        self.click_event()
+
+
+class ConnectView(arcade.View):
+    """ Screen waiting for people to connect   """
+    def __init__(self, player_id=None, player_name=None):
+        super().__init__()
+        if player_id is None:
+            self.player_id = str(uuid.uuid4())
+        else:
+            self.player_id = player_id
+        self.player_name = player_name
+        self.ui_manager = gui.UIManager()
+        self.ui_input_box=None
+        self.label = None
+
+    @property
+    def game_state(self):
+        return self.window.game_state
+    @property
+    def event_buffer(self):
+        return self.window.event_buffer
+    def connect(self, text):
+        self.player_name = text
+        new_event = gameutil.EventConnect(type='UpdatePlayerInfo',
+                                          player_name = self.player_name,
+                                          player_id = self.player_id
+                                          )
+        self.event_buffer.append(new_event)
+
+
+
+    def send_ready(self, text):
+        new_event = gameutil.EventConnect(type='PlayerReady',
+                                          player_name = self.player_name,
+                                          player_id = self.player_id
+                                          )
+        self.event_buffer.append(new_event)
+
+    def reset_player_and_game(self):
+        print('reset')
+        new_event = gameutil.EventConnect(type='ResetPlayerAndGame')
+        self.event_buffer.append(new_event)
+
+    def on_update(self, deltatime):
+        if self.game_state:
+            if self.game_state.status=='Start Game View':
+                player_index = self.game_state.player_index_per_id[self.player_id]
+                player_name =  self.game_state.player_name_per_id[self.player_id]
+                n_player = self.game_state.n_player
+                self.ui_manager.purge_ui_elements()
+                game_view = GameView(player_id=self.player_id)
+                game_view.setup(n_player=n_player, player_index=player_index)
+                self.window.show_view(game_view)
+
+
+    def setup(self):
+        self.ui_input_box = gui.UIInputBox(
+            center_x=200,
+            center_y=250,
+            width=300
+        )
+        self.ui_manager.add_ui_element(self.ui_input_box )
+        connect_button = GameFlatButton(
+            lambda : self.connect(self.ui_input_box.text),
+            text='Connect',
+            center_x=200,
+            center_y=200,
+            width=200
+        )
+        self.ui_manager.add_ui_element(connect_button)
+
+        submit_button = GameFlatButton(
+            lambda : self.send_ready(self.ui_input_box.text),
+            text='READY (Game starts when all players are ready',
+            center_x=450,
+            center_y=150,
+            width=700
+        )
+        self.ui_manager.add_ui_element(submit_button)
+
+        clear_button = GameFlatButton(
+            self.reset_player_and_game,
+            text='Reset Player (and Game if being played)',
+            center_x=450,
+            center_y=100,
+            width=700
+        )
+        self.ui_manager.add_ui_element(clear_button)
+    def on_show_view(self):
+        """ Called once when view is activated. """
+        self.setup()
+        arcade.set_background_color(arcade.color.AMAZON)
+    def on_draw(self):
+        arcade.start_render()
+        if self.game_state:
+            starting_y = SCREEN_HEIGHT-200
+            arcade.draw_text('players name | index', 200, starting_y, arcade.color.GOLD, 14)
+            for player_id, player_name in self.game_state.player_name_per_id.items():
+                starting_y -= 25
+                arcade.draw_text(f'{player_name} | {str(self.game_state.player_index_per_id[player_id]) if player_id in self.game_state.player_index_per_id else "not ready"}',
+                                 200, starting_y, arcade.color.GOLD, 14)
+
+
+class GameView(arcade.View):
+    """ Main Game View class. """
+
+    def __init__(self, player_id=None):
         super().__init__()
         self.ui_manager = gui.UIManager()
         arcade.set_background_color(arcade.color.AMAZON)
-
-        self.player_id = str(uuid.uuid4())
-        self.player_name = player_name
+        if player_id is None:
+            self.player_id = str(uuid.uuid4())
+        else:
+            self.player_id = player_id
+        #self.player_name = player_name
         self.player_name_display_list = None
         self.n_player = None
         self.self_player_index = None
@@ -250,8 +367,7 @@ class GameView(arcade.View):
 
         # List of cards we are dragging with the mouse
         self.held_cards = None
-        # Original location of cards we are dragging with the mouse in case
-        # they have to go back.
+        # Original location of cards we are dragging with the mouse in case they have to go back.
         self.held_cards_original_position = None
         # active cards
         self.active_cards = None
@@ -284,14 +400,13 @@ class GameView(arcade.View):
         self.active_cards = []
         self.card_on_press = None
 
-    def setup(self, n_player = 6, player_index=1, n_decks=6, n_residual_card=6):
+    def setup(self, n_player = None, player_index=0):
         """ Set up the game here. Call this function to restart the game. """
         self.ui_manager.purge_ui_elements()
         self.n_player = n_player
         self.n_pile = self.n_player *3+2
         self.self_player_index = player_index
-        self.n_decks=n_decks
-        self.n_residual_card=n_residual_card
+
         # List of cards we are dragging with the mouse
         self.held_cards = []
         self.held_cards_original_position=[]
@@ -340,7 +455,9 @@ class GameView(arcade.View):
         self.pile_text_list.append(
             ("CLRT + R to reset the game", starting_x, starting_y-step_y*4, arcade.csscolor.GOLD,
              15))
-
+        self.pile_text_list.append(
+            ("CLRT + Q to reset the game and return to login", starting_x, starting_y-step_y*5, arcade.csscolor.GOLD,
+             15))
         # button = gui.UIFlatButton(
         #     'sort',
         #     center_x=int(hand_pile_mat.right-SORT_BUTTON_WIDTH//2),
@@ -450,6 +567,12 @@ class GameView(arcade.View):
     def on_update(self, delta_time):
         """ on update, which is called in the event loop."""
         if self.game_state:
+            if self.game_state.status=='Wait for Player to Join':
+                self.ui_manager.purge_ui_elements()
+                connect_view = ConnectView(player_id=self.player_id)
+                connect_view.setup()
+                self.window.show_view(connect_view)
+                return
             if self.game_state.status=='New Game':
 
                 self.game_state.status='Game'
@@ -502,8 +625,9 @@ class GameView(arcade.View):
          if symbol == arcade.key.R:
              if modifiers & arcade.key.MOD_CTRL:
                 self.initiate_game_restart()
-         if symbol == arcade.key.C:
-                self.connect()
+         if symbol == arcade.key.Q:
+             if modifiers & arcade.key.MOD_CTRL:
+                self.reset_player_and_game()
     def get_pile_index_for_card(self, card):
         """ What pile is this card in? """
 
@@ -620,13 +744,13 @@ class GameView(arcade.View):
             card.center_y += dy
 
     ## supporting functions to send out events
-    def connect(self):
-        new_event = gameutil.Event(type='Connect',
-                                   player_index=self.self_player_index,
-                                   player_name = self.player_name,
-                                   player_id = self.player_id
-                                   )
-        self.event_buffer.append(new_event)
+    # def connect(self):
+    #     new_event = gameutil.Event(type='Connect',
+    #                                player_index=self.self_player_index,
+    #                                player_name = self.player_name,
+    #                                player_id = self.player_id
+    #                                )
+    #     self.event_buffer.append(new_event)
 
     def move_cards(self, cards, new_pile_index):
         old_pile_index = self.get_pile_index_for_card(cards[0])
@@ -668,10 +792,17 @@ class GameView(arcade.View):
                 self.event_buffer.append(new_event)
                 self.game_state.update_from_event(new_event)
 
+    def reset_player_and_game(self):
+        print('reset')
+        new_event = gameutil.EventConnect(type='ResetPlayerAndGame')
+        self.event_buffer.append(new_event)
+
 
     def initiate_game_restart(self):
-        n_card_per_player = (self.n_decks * 64 - self.n_residual_card) // self.n_player
-        n_residual_card = self.n_decks * 64 - n_card_per_player*self.n_player
+        n_decks= self.n_player
+        n_residual_card =  self.n_player*2
+        n_card_per_player = (n_decks * 64 - n_residual_card) // self.n_player
+        n_residual_card = n_decks * 64 - n_card_per_player*self.n_player
         n_card_per_pile = {w: n_card_per_player for w in range(self.n_player)}
         n_card_per_pile[self.n_player*3]=n_residual_card
         new_event = gameutil.Event(type='StartNewGame',
@@ -682,7 +813,6 @@ class GameView(arcade.View):
                                    face_down_pile = [self.n_player*3],
                                    )
         self.event_buffer.append(new_event)
-
 
 def thread_pusher(window: CardGame, server_ip:str):
     ctx = Context()
@@ -700,7 +830,6 @@ def thread_pusher(window: CardGame, server_ip:str):
     finally:
         push_sock.close(1)
         ctx.destroy(linger=1)
-
 
 def thread_receiver(window: CardGame, server_ip: str):
     ctx = Context()
@@ -721,10 +850,11 @@ def main(args):
     """ Main method """
 
     window = CardGame(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, resizable=True)
-
-    game_view = GameView(args.player_name if args.player_name!='' else f'PLAYER {args.playerindex}')
-    game_view.setup(n_player=args.n_player, player_index=args.playerindex)
-    window.show_view(game_view)
+    connect_view = ConnectView()
+    connect_view.setup()
+    #game_view = GameView(args.player_name if args.player_name!='' else f'PLAYER {args.playerindex}')
+    #game_view.setup(n_player=args.n_player, player_index=args.playerindex)
+    window.show_view(connect_view)
     thread1 = threading.Thread(
         target=thread_pusher, args=(window, args.server_ip,), daemon=True)
     thread2 = threading.Thread(
