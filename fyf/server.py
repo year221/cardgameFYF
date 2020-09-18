@@ -9,7 +9,7 @@ from zmq.asyncio import Context, Socket
 
 import gameutil
 #mport GameState, Event, json_obj_hook
-import traceback
+#import traceback
 
 SERVER_UPDATE_TICK_HZ = 10
 
@@ -20,15 +20,16 @@ async def update_from_client(gs: gameutil.GameState, gs_buffer: list, sock: Sock
 
 
             msg = await sock.recv_json(object_hook=gameutil.json_obj_hook)
+            print(msg)
             counter = msg['counter']
             event_dict = msg['event']
-            print(msg)
             #print(event_dict)
             # update game sate
-            print({key: val for key, val in gs.cards_in_pile.items() if key != 0})
+            #print({key: val for key, val in gs.cards_in_pile.items() if key != 0})
             new_gs_ls = gs.update_from_event(gameutil.Event(**event_dict))
-            gs_buffer += new_gs_ls
-            print('***')
+            if new_gs_ls:
+                gs_buffer += new_gs_ls
+            #print('***')
             #print(gs)
             # event_dict = await sock.recv_json()
             #print(f'Got event dict: {event_dict}')
@@ -36,7 +37,7 @@ async def update_from_client(gs: gameutil.GameState, gs_buffer: list, sock: Sock
         pass
     except Exception as e:
         print(e)
-        traceback.print_exc()
+        #traceback.print_exc()
 
 
 async def ticker(sock1, sock2):
