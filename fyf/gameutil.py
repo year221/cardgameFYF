@@ -15,8 +15,9 @@ class GameState:
     cards_in_pile: Dict[int, List[int]] = field(default_factory=dict)
     cards_status : Dict[int, str] = field(default_factory=dict)
     n_player: int = 0
-    player_id: Dict[int, str] = field(default_factory=dict)
-    player_name : Dict[int, str] = field(default_factory=dict)
+    player_index_per_id: Dict[str, int] = field(default_factory=dict)
+    player_name: Dict[str, str] = field(default_factory=dict)
+    player_name_per_id: Dict[str, str] = field(default_factory=dict)
     status: str = 'Initialization'
 
     def to_json(self):
@@ -49,7 +50,7 @@ class GameState:
             return [copy.deepcopy(self)]
 
         elif event.type == 'StartNewGame':
-            self.n_player = event.n_player
+            #self.n_player = event.n_player
             self.n_pile = event.n_pile
             all_cards = list(range(sum(event.n_card_per_pile.values())))
             self.cards_status = {w: 'U' for w in all_cards}
@@ -65,11 +66,45 @@ class GameState:
                 n_cards_distributed+=val
             self.status='New Game'
             return [copy.deepcopy(self)]
-        elif event.type == 'Connect':
-            self.player_name.update({event.player_index: event.player_name})
-            self.player_id.update({event.player_index: event.player_id})
+        elif event.type == 'UpdatePlayerInfo':
+            self.player_name_per_id.update({event.player_id: event.player_name})
             print(self)
-            return []
+            return [copy.deepcopy(self)]
+        elif event.type == 'PlayerDisconnect':
+            if event.player_id in self.player_index_per_id:
+                index = self.player_index_per_id.pop(event.player_id)
+                self.player_name.pop(index)
+            if event.player_id in self.player_name_per_id:
+                self.player_name_per_id.pop(event.player_id)
+
+            print(self)
+            return [copy.deepcopy(self)]
+        elif event.type == 'ResetPlayerAndGame':
+            self.player_name_per_id = {}
+            self.player_index_per_id = {}
+            self.player_name = {}
+            self.cards_status = {}
+            n_cards_distributed = 0
+            self.cards_in_pile = {}
+            self.status = 'Wait for Player to Join'
+            return [copy.deepcopy(self)]
+        elif event.type == 'PlayerReady':
+            if self.status == 'Wait for Player to Join':
+                self.player_name_per_id.update({event.player_id: event.player_name})
+
+
+                if event.player_id not in self.player_index_per_id:
+                    assigned_index = min(set(range(len(self.player_name_per_id))) - set(self.player_index_per_id.values()))
+                    self.player_index_per_id.update({event.player_id:assigned_index})
+
+                if (len(self.player_index_per_id) == len(self.player_name_per_id)) and (len(self.player_index_per_id) >=2):
+                    # all player recognized. Start game
+                    sorted_index = sorted(self.player_index_per_id.values())
+                    self.player_index_per_id = {key:sorted_index.index(val) for key, val in self.player_index_per_id.items()}
+                    self.player_name = {index_val: self.player_name_per_id[player_id] for player_id, index_val in self.player_index_per_id.items()}
+                    self.n_player = len(self.player_index_per_id)
+                    self.status = 'Start Game View'
+                return [copy.deepcopy(self)]
 
 
 
