@@ -594,13 +594,13 @@ class GameView(arcade.View):
                                 self.card_on_press = None
                             self.held_cards.remove(self.held_cards[index])
                             self.held_cards_original_position.remove(self.held_cards_original_position[index])
-                            self.held_cards_value.remove(self.held_cards_value[index])
+                            held_cards_value.remove(held_cards_value[index])
 
                         if card_value in active_cards_value:
                             index = active_cards_value.index(card_value)
                             self.active_cards[index].active = False
                             self.active_cards.remove(self.active_cards[index])
-                            self.active_cards_value.remove(self.active_cards_value[index])
+                            active_cards_value.remove(active_cards_value[index])
 
     def on_draw(self):
         """ Render the screen. """
