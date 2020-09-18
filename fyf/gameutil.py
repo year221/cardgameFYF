@@ -97,7 +97,7 @@ class GameState:
                     assigned_index = min(set(range(len(self.player_name_per_id))) - set(self.player_index_per_id.values()))
                     self.player_index_per_id.update({event.player_id:assigned_index})
 
-                if (len(self.player_index_per_id) == len(self.player_name_per_id)) and (len(self.player_index_per_id) >=3):
+                if (len(self.player_index_per_id) == len(self.player_name_per_id)) and (len(self.player_index_per_id) >=2):
                     # all player recognized. Start game
                     sorted_index = sorted(self.player_index_per_id.values())
                     self.player_index_per_id = {key:sorted_index.index(val) for key, val in self.player_index_per_id.items()}
