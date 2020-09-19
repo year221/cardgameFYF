@@ -138,15 +138,20 @@ def sort_cards(card_list, sorting_rule=None):
         return [w for w, _ in sorted_cards]
     #return sorted_cards
 
+PILE_BUTTON_HEIGHT=12
+PILE_BUTTON_FONTSIZE=8
 class CardPile(arcade.SpriteList):
     """ Card sprite """
 
-    def __init__(self, card_pile_id, mat_center, mat_size, mat_boundary, card_scale, card_offset, sorting_rule = None, auto_sort_setting = None , other_properties=None, *args, **kwargs):
+    def __init__(self, card_pile_id, mat_center, mat_size, mat_boundary, card_scale, card_offset, sorting_rule=None, auto_sort_setting=None,
+                 enable_sort_button=True, enable_clear_button=False, enable_recover_last_removed_cards=False, clear_action=None,
+                 other_properties=None, *args, **kwargs):
         """ Card constructor """
 
         super().__init__( *args, **kwargs)
         self.card_pile_id=card_pile_id
         self.mat_center = mat_center
+        self.mat_size = mat_size
         self.card_start_x, self.card_start_y= mat_center[0] - mat_size[0]//2 + mat_boundary[0], mat_center[1] + mat_size[1]//2 - mat_boundary[1]
         self.card_max_x = mat_center[0] + mat_size[0]//2 - mat_boundary[0]
         self.step_x, self.step_y = int(card_offset[0]), int(card_offset[1])
@@ -155,14 +160,76 @@ class CardPile(arcade.SpriteList):
         self.auto_sort_setting = auto_sort_setting
         self._cached_values = []
         self._cached_face_status = {}
+        self.enable_sort_button = enable_sort_button
+        self.sort_button = None
+        self.enable_clear_button = enable_clear_button
+        self.clear_button = None
+        self.clear_action = clear_action
+        self.enable_recover_last_removed_cards = enable_recover_last_removed_cards
+        self.recover_button = None
+        self._last_removed_card_values = []
+        self._last_removed_face_status = {}
         self.other_properties = copy.deepcopy(other_properties)
 
     def clear(self):
         """ clear entire pile"""
+        self._last_removed_card_values = self._cached_values
+        self._last_removed_face_status = self._cached_face_status
         self._cached_values = []
         self._cached_face_status = {}
+        print(self.__len__())
         while self.__len__() > 0:
             self.pop()
+        print('clear')
+
+    def recover_removed_card(self):
+        """ recover previously cleared cards"""
+        for value in self._last_removed_card_values:
+            self.add_card(Card(value=value, face=self._last_removed_face_status[value]))
+        self._last_removed_card_values=[]
+        self._last_removed_face_status={}
+
+    def get_ui_elements(self):
+        all_elements = []
+        if self.enable_sort_button:
+            if self.sort_button is None:
+                self.sort_button = GameFlatButton(
+                    self.resort_cards,
+                    font_size = PILE_BUTTON_FONTSIZE,
+                    text='SORT',
+                    center_x=self.mat_center[0]-self.mat_size[0]//2+int(self.mat_size[0]/3/2),
+                    center_y=self.mat_center[1]+self.mat_size[1]//2+PILE_BUTTON_HEIGHT//2,
+                    width=int(self.mat_size[0]/3),
+                    height=PILE_BUTTON_HEIGHT
+                )
+            all_elements.append(self.sort_button)
+        if self.enable_clear_button:
+
+            if self.clear_button is None:
+                if self.clear_action is not None:
+                    self.clear_button = GameFlatButton(
+                        self.clear_action,
+                        font_size=PILE_BUTTON_FONTSIZE,
+                        text='CLEAR',
+                        center_x=self.mat_center[0]-self.mat_size[0]//2+int(self.mat_size[0]/6*3),
+                        center_y=self.mat_center[1]+self.mat_size[1]//2+PILE_BUTTON_HEIGHT//2,
+                        width=int(self.mat_size[0]/3),
+                        height=PILE_BUTTON_HEIGHT
+                    )
+            all_elements.append(self.clear_button)
+        if self.enable_recover_last_removed_cards:
+            if self.recover_button is None:
+                self.recover_button = GameFlatButton(
+                    self.recover_removed_card,
+                    font_size=PILE_BUTTON_FONTSIZE,
+                    text='RECOVER',
+                    center_x=self.mat_center[0]-self.mat_size[0]//2+int(self.mat_size[0]/6*5),
+                    center_y=self.mat_center[1]+self.mat_size[1]//2+PILE_BUTTON_HEIGHT//2,
+                    width=int(self.mat_size[0]/3),
+                    height=PILE_BUTTON_HEIGHT
+                )
+            all_elements.append(self.recover_button)
+        return all_elements
 
     def add_card(self, card):
         """ add card """
@@ -177,10 +244,10 @@ class CardPile(arcade.SpriteList):
             card_y = self.card_start_y
         card.position = card_x, card_y
         card.scale=self.card_scale
-        #card.y = card_y
+
         self.append(card)
 
-        #self._cached_codes.append(card.code)
+
         self._cached_values.append(card.value)
         self._cached_face_status[card.value]=card.face
 
@@ -283,9 +350,14 @@ class GameFlatButton(arcade.gui.UIFlatButton):
     """
     To capture a button click, subclass the button and override on_click.
     """
-    def __init__(self, click_event, *arg, **kargs):
+    def __init__(self, click_event, font_size=None, *arg, **kargs):
         super().__init__(*arg, **kargs)
         self.click_event = click_event
+        if font_size is not None:
+            self.set_style_attrs(font_size=font_size)
+        self.set_style_attrs(border_color=arcade.color.GREEN,
+                             border_color_hover=arcade.color.BLUE,
+                             border_color_press=arcade.color.ORANGE)
 
     def on_click(self):
         """ Called when user lets off button """
@@ -484,6 +556,9 @@ class GameView(arcade.View):
             card_offset = (int(CARD_WIDTH*CARD_SCALE*CARD_OFFSET_PCT),int(CARD_HEIGHT*CARD_SCALE)),
             sorting_rule=SORT_BY_SUIT_THEN_NUMBER,
             auto_sort_setting=AUTO_SORT_ALL_CARDS,
+            enable_sort_button=True,
+            enable_clear_button=False,
+            enable_recover_last_removed_cards=False,
             other_properties={'Clearable': False}
         ))
 
@@ -537,6 +612,10 @@ class GameView(arcade.View):
                     card_offset = (int(CARD_WIDTH*NORMAL_MAT_SCALE*CARD_OFFSET_PCT),int(CARD_HEIGHT*NORMAL_MAT_SCALE*CARD_OFFSET_PCT)),
                     sorting_rule= SORT_BY_SUIT_THEN_NUMBER,
                     auto_sort_setting = AUTO_SORT_NEW_CARD_ONLY,
+                    enable_sort_button=True,
+                    enable_clear_button=True,
+                    clear_action=lambda: self.clear_a_pile(pile_index=player_index+starting_index_output_pile),
+                    enable_recover_last_removed_cards=False,
                     other_properties = {'Clearable':True}
                 )
             )
@@ -567,6 +646,9 @@ class GameView(arcade.View):
                                  int(CARD_HEIGHT * SCORE_MAT_SCALE * CARD_OFFSET_PCT)),
                     sorting_rule=SORT_BY_NUMBER_THEN_SUIT,
                     auto_sort_setting=NO_AUTO_SORT,
+                    enable_sort_button=True,
+                    enable_clear_button=False,
+                    enable_recover_last_removed_cards=False,
                     other_properties={'Clearable'}
                 )
             )
@@ -591,6 +673,9 @@ class GameView(arcade.View):
                              int(CARD_HEIGHT * SCORE_MAT_SCALE * CARD_OFFSET_PCT)),
                 sorting_rule=DO_NOT_SORT,
                 auto_sort_setting=NO_AUTO_SORT,
+                enable_sort_button=False,
+                enable_clear_button=False,
+                enable_recover_last_removed_cards=False,
                 other_properties={'Clearable': False}
             )
         )
@@ -612,11 +697,19 @@ class GameView(arcade.View):
                              int(CARD_HEIGHT * SCORE_MAT_SCALE * CARD_OFFSET_PCT)),
                 sorting_rule=SORT_BY_NUMBER_THEN_SUIT,
                 auto_sort_setting=NO_AUTO_SORT,
+                enable_sort_button=True,
+                enable_clear_button=False,
+                enable_recover_last_removed_cards=False,
                 other_properties={'Clearable': False}
             )
         )
         self.pile_text_list.append(
             ("Public: all scored cards", pile.center_x - 50, pile.center_y, arcade.csscolor.DARK_GRAY, 10))
+
+        for card_pile in self.card_pile_list:
+            new_ui_elments = card_pile.get_ui_elements()
+            for element in new_ui_elments:
+                self.ui_manager.add_ui_element(element)
 
     # def update_game_state(self, gs_dict):
     #     """ update game state from gs_dict """
