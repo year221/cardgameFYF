@@ -144,7 +144,7 @@ class CardPile(arcade.SpriteList):
     """ Card sprite """
 
     def __init__(self, card_pile_id, mat_center, mat_size, mat_boundary, card_scale, card_offset, sorting_rule=None, auto_sort_setting=None,
-                 enable_sort_button=True, enable_clear_button=False, enable_recover_last_removed_cards=False, clear_action=None,
+                 enable_sort_button=True, enable_clear_button=False, enable_recover_last_removed_cards=False, clear_action=None, recover_action=None,
                  other_properties=None, *args, **kwargs):
         """ Card constructor """
 
@@ -167,6 +167,7 @@ class CardPile(arcade.SpriteList):
         self.clear_action = clear_action
         self.enable_recover_last_removed_cards = enable_recover_last_removed_cards
         self.recover_button = None
+        self.recover_action = recover_action
         self._last_removed_card_values = []
         self._last_removed_face_status = {}
         self.other_properties = copy.deepcopy(other_properties)
@@ -184,10 +185,14 @@ class CardPile(arcade.SpriteList):
 
     def recover_removed_card(self):
         """ recover previously cleared cards"""
-        for value in self._last_removed_card_values:
+        card_recovered= self._last_removed_card_values
+        face_status = self._last_removed_face_status
+        for value in card_recovered:
             self.add_card(Card(value=value, face=self._last_removed_face_status[value]))
+
         self._last_removed_card_values=[]
         self._last_removed_face_status={}
+        return card_recovered, face_status
 
     def get_ui_elements(self):
         all_elements = []
@@ -220,7 +225,7 @@ class CardPile(arcade.SpriteList):
         if self.enable_recover_last_removed_cards:
             if self.recover_button is None:
                 self.recover_button = GameFlatButton(
-                    self.recover_removed_card,
+                    self.recover_action,
                     font_size=PILE_BUTTON_FONTSIZE,
                     text='RECOVER',
                     center_x=self.mat_center[0]-self.mat_size[0]//2+int(self.mat_size[0]/6*5),
@@ -596,12 +601,13 @@ class GameView(arcade.View):
         # main output piles for each player
         starting_index_output_pile = self.n_player
         for player_index in range(self.n_player):
-
+            pile_ls_index = len(self.card_pile_list)
             pile_position = calculate_main_pile_positions(player_index, self.n_player, self.self_player_index)
-            pile = Mat(len(self.card_pile_list), int(MAT_WIDTH*NORMAL_MAT_SCALE), int(MAT_HEIGHT*NORMAL_MAT_SCALE),
+            pile = Mat(pile_ls_index, int(MAT_WIDTH*NORMAL_MAT_SCALE), int(MAT_HEIGHT*NORMAL_MAT_SCALE),
                                            arcade.csscolor.FOREST_GREEN if player_index==self.self_player_index else arcade.csscolor.DARK_OLIVE_GREEN)
             pile.position = pile_position
             self.pile_mat_list.append(pile)
+
             self.card_pile_list.append(
                 CardPile(
                     card_pile_id=player_index+starting_index_output_pile,
@@ -614,8 +620,9 @@ class GameView(arcade.View):
                     auto_sort_setting = AUTO_SORT_NEW_CARD_ONLY,
                     enable_sort_button=True,
                     enable_clear_button=True,
-                    clear_action=lambda: self.clear_a_pile(pile_index=player_index+starting_index_output_pile),
-                    enable_recover_last_removed_cards=False,
+                    clear_action=lambda: self.clear_a_pile(pile_index=pile_ls_index),
+                    enable_recover_last_removed_cards=True,
+                    recover_action=lambda: self.recover_card_to_a_pile(pile_index=pile_ls_index),
                     other_properties = {'Clearable':True}
                 )
             )
@@ -943,6 +950,20 @@ class GameView(arcade.View):
                 self.card_pile_list[pile_index].clear()  # remove_card(dropped_card)
                 self.event_buffer.append(new_event)
                 self.game_state.update_from_event(new_event)
+
+    def recover_card_to_a_pile(self, pile_index):
+        card_values, face_dict = self.card_pile_list[pile_index].recover_removed_card()
+
+        new_event = gameutil.Event(type='Add',
+                                   player_index=self.self_player_index,
+                                   dst_pile = self.card_pile_list[pile_index].card_pile_id,
+                                   cards = card_values,
+                                   cards_status = face_dict
+                                   )
+        self.event_buffer.append(new_event)
+        self.game_state.update_from_event(new_event)
+
+
 
     def reset_player_and_game(self):
         print('reset')
