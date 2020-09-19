@@ -105,3 +105,26 @@ class Card(arcade.Sprite):
 
     #def code_face_flipped(self):
     #    return self.value, 'D' if self._is_face_up else 'U'
+
+
+class GameFlatButton(arcade.gui.UIFlatButton):
+    """
+    To capture a button click, subclass the button and override on_click.
+    """
+    def __init__(self, click_event, font_size=None, *arg, **kargs):
+        super().__init__(*arg, **kargs)
+        self.click_event = click_event
+        if font_size is not None:
+            self.set_style_attrs(font_size=font_size)
+        self.set_style_attrs(border_color=arcade.color.BLACK,
+                             font_color=arcade.color.GOLD,
+                             #border_color_hover=arcade.color.BLUE,
+                             #border_color_press=arcade.color.ORANGE,
+                             bg_color=arcade.color.DARK_SLATE_GRAY,
+                             bg_color_hover=arcade.color.DARK_ORANGE,
+                             bg_color_press=arcade.color.ORANGE,
+                             )
+
+    def on_click(self):
+        """ Called when user lets off button """
+        self.click_event()

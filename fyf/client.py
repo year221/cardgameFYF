@@ -12,7 +12,7 @@ import arcade
 import os
 import argparse
 import gameutil, clientutil
-from clientutil import Mat, Card
+from clientutil import Mat, Card, GameFlatButton
 from arcade import gui
 from arcade.gui import UIEvent, TEXT_INPUT,UIInputBox
 import copy
@@ -351,22 +351,7 @@ class CardGame(arcade.Window):
         # no GUI change is allowed in this function
         self.game_state = gameutil.GameState(**gs_dict)
 
-class GameFlatButton(arcade.gui.UIFlatButton):
-    """
-    To capture a button click, subclass the button and override on_click.
-    """
-    def __init__(self, click_event, font_size=None, *arg, **kargs):
-        super().__init__(*arg, **kargs)
-        self.click_event = click_event
-        if font_size is not None:
-            self.set_style_attrs(font_size=font_size)
-        self.set_style_attrs(border_color=arcade.color.GREEN,
-                             border_color_hover=arcade.color.BLUE,
-                             border_color_press=arcade.color.ORANGE)
 
-    def on_click(self):
-        """ Called when user lets off button """
-        self.click_event()
 
 
 class ConnectView(arcade.View):
