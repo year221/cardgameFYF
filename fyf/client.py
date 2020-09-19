@@ -113,6 +113,18 @@ NO_AUTO_SORT = 0
 AUTO_SORT_NEW_CARD_ONLY = 1
 AUTO_SORT_ALL_CARDS = 2
 
+def sort_card_value(value_list, sorting_rule=None):
+    if sorting_rule is None:
+        return value_list
+    elif sorting_rule == DO_NOT_SORT:
+        return value_list
+    elif sorting_rule == SORT_BY_SUIT_THEN_NUMBER:
+        sorted_values = sorted([(w, w % 54) for w in value_list], key=lambda x: x[1])
+        return [w for w,_ in sorted_values]
+    elif sorting_rule == SORT_BY_NUMBER_THEN_SUIT:
+        sorted_values = sorted([(w, (((w % 54) % 13) * 5+ (w // 52) * 65 + (w % 54)//13)) for w in value_list], key=lambda x: x[1])
+        return [w for w, _ in sorted_values]
+
 def sort_cards(card_list, sorting_rule=None):
     if sorting_rule is None:
         return card_list
@@ -120,9 +132,11 @@ def sort_cards(card_list, sorting_rule=None):
         return card_list
     elif sorting_rule == SORT_BY_SUIT_THEN_NUMBER:
         sorted_cards = sorted([(w, w.value % 54) for w in card_list], key=lambda x: x[1])
+        return [w for w,_ in sorted_cards]
     elif sorting_rule == SORT_BY_NUMBER_THEN_SUIT:
-        sorted_cards = sorted([(w, (((w.value % 54) % 13) * 5+ (w.value // 52) * 65 + ((w.value % 54)//13)) for w in card_list], key=lambda x: x[1])
-    return sorted_cards
+        sorted_cards = sorted([(w, (((w.value % 54) % 13) * 5+ (w.value // 52) * 65 + (w.value % 54)//13)) for w in card_list], key=lambda x: x[1])
+        return [w for w, _ in sorted_cards]
+    #return sorted_cards
 
 class CardPile(arcade.SpriteList):
     """ Card sprite """
@@ -198,48 +212,48 @@ class CardPile(arcade.SpriteList):
         sorted_cards = sort_cards(self, sorting_rule)#[(w, w.value % 54) for w in self], key=lambda x: x[1])
         #if sorting_rule == SORT_BY_SUIT_THEN_NUMBER:
         #    sorted_cards = sorted([(w, w.value % 54) for w in self], key = lambda x:x[1])
-        if self.to_valuelist() != sorted_cards:
+        if self.to_valuelist() != [w.value for w in sorted_cards]:
             self.clear()
-            for card, _ in sorted_cards:
+            for card in sorted_cards:
                 self.add_card(card)
 
     def from_value_face(self, value_list, face_status_dict):
         """ update pile based on value list and face status dictionary"""
         # update pile based on new value list and face status dict
-        cards_to_remove = set(self._cached_values) - set(value_list)
-        cards_to_add = set(value_list) - set(self._cached_values)
-        cards_to_flip = dict(set(self._cached_face_status.items())-set(face_status_dict.items()))
+        card_values_to_remove = set(self._cached_values) - set(value_list)
+        card_values_to_add = set(value_list) - set(self._cached_values)
+        card_values_to_flip = dict(set(self._cached_face_status.items())-set(face_status_dict.items()))
 
-        if cards_to_remove or cards_to_flip or cards_to_add:
+        if card_values_to_remove or card_values_to_flip or card_values_to_add:
             self._cached_values = value_list
             self._cached_face_status = {key: value for key, value in face_status_dict.items() if key in self._cached_values}
 
-            if cards_to_remove:
-                cards_to_remove_ls = [card for card in self if card.value in cards_to_remove]
+            if card_values_to_remove:
+                cards_to_remove_ls = [card for card in self if card.value in card_values_to_remove]
                 for card in cards_to_remove_ls:
                     self.remove(card)
 
-            if cards_to_flip:
-                cards_to_flip = [card for card in self if card.value in cards_to_flip.keys()]
+            if card_values_to_flip:
+                cards_to_flip = [card for card in self if card.value in card_values_to_flip.keys()]
                 for card in cards_to_flip:
                     card.face = face_status_dict[card.value]
 
-            if cards_to_add:
+            if card_values_to_add:
                 #NO_AUTO_SORT = 0
                 #AUTO_SORT_NEW_CARD_ONLY = 1
                 #AUTO_SORT_ALL_CARDS = 2
                 if self.auto_sort_setting is None or self.auto_sort_setting == NO_AUTO_SORT:
-                    for value in cards_to_add:
+                    for value in card_values_to_add:
                         self.add_card(Card(value=value, face=face_status_dict[value]))
                 elif self.auto_sort_setting == AUTO_SORT_NEW_CARD_ONLY:
-                    sorted_cards = sort_cards(self, self.sorting_rule)
-                    for value in sorted_cards:
+                    sorted_card_values = sort_card_value(card_values_to_add, self.sorting_rule)
+                    for value in sorted_card_values:
                         self.add_card(Card(value=value, face=face_status_dict[value]))
                 else:
-                    for value in cards_to_add:
+                    for value in card_values_to_add:
                         self.add_card(Card(value=value, face=face_status_dict[value]))
 
-        card_added_removed = set.union(cards_to_remove, cards_to_add)
+        card_added_removed = set.union(card_values_to_remove, card_values_to_add)
         if self.auto_sort_setting == AUTO_SORT_ALL_CARDS:
             self.resort_cards()
         return card_added_removed
