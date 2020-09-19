@@ -77,9 +77,6 @@ PILE_SEPARATION_X =  CARD_WIDTH
 HAND_PILE = 0
 
 
-def sort_cards(value_list, exclude_values=None):
-    return [w[0] for w in sorted([(w, (w % 54)) for w in value_list], key=lambda x: x[1])]
-
 def calculate_main_pile_positions(player_index, n_player, self_player_index=None):
     if self_player_index is None:
         self_player_index = 0
@@ -109,12 +106,28 @@ COM_TO_SERVER_NOUPDATE = 0
 COM_FROM_SERVER_UPDATE = 1
 COM_FROM_SERVER_NOUPDATE = 0
 
-SORT_BY_SUIT=1
+DO_NOT_SORT=0
+SORT_BY_SUIT_THEN_NUMBER=1
+SORT_BY_NUMBER_THEN_SUIT=2
+NO_AUTO_SORT = 0
+AUTO_SORT_NEW_CARD_ONLY = 1
+AUTO_SORT_ALL_CARDS = 2
+
+def sort_cards(card_list, sorting_rule=None):
+    if sorting_rule is None:
+        return card_list
+    elif sorting_rule == DO_NOT_SORT:
+        return card_list
+    elif sorting_rule == SORT_BY_SUIT_THEN_NUMBER:
+        sorted_cards = sorted([(w, w.value % 54) for w in card_list], key=lambda x: x[1])
+    elif sorting_rule == SORT_BY_NUMBER_THEN_SUIT:
+        sorted_cards = sorted([(w, (((w.value % 54) % 13) * 5+ (w.value // 52) * 65 + ((w.value % 54)//13)) for w in card_list], key=lambda x: x[1])
+    return sorted_cards
 
 class CardPile(arcade.SpriteList):
     """ Card sprite """
 
-    def __init__(self, card_pile_id, mat_center, mat_size, mat_boundary, card_scale, card_offset,  other_properties=None, *args, **kwargs):
+    def __init__(self, card_pile_id, mat_center, mat_size, mat_boundary, card_scale, card_offset, sorting_rule = None, auto_sort_setting = None , other_properties=None, *args, **kwargs):
         """ Card constructor """
 
         super().__init__( *args, **kwargs)
@@ -124,6 +137,8 @@ class CardPile(arcade.SpriteList):
         self.card_max_x = mat_center[0] + mat_size[0]//2 - mat_boundary[0]
         self.step_x, self.step_y = int(card_offset[0]), int(card_offset[1])
         self.card_scale = card_scale
+        self.sorting_rule= sorting_rule
+        self.auto_sort_setting = auto_sort_setting
         self._cached_values = []
         self._cached_face_status = {}
         self.other_properties = copy.deepcopy(other_properties)
@@ -171,14 +186,19 @@ class CardPile(arcade.SpriteList):
         self._cached_face_status.pop(card.value)
         #self._cached_codes.remove(card.code)
 
-    def sort_cards(self, sorting_rule=SORT_BY_SUIT):
+
+    def resort_cards(self, sorting_rule=None):
         """ sort cards based on certain order
 
         :param sorting_rule:
         :return: None
         """
-        if sorting_rule == SORT_BY_SUIT:
-            sorted_cards = sorted([(w, w.value % 54) for w in self], key = lambda x:x[1])
+        if sorting_rule is None:
+            sorting_rule = self.sorting_rule
+        sorted_cards = sort_cards(self, sorting_rule)#[(w, w.value % 54) for w in self], key=lambda x: x[1])
+        #if sorting_rule == SORT_BY_SUIT_THEN_NUMBER:
+        #    sorted_cards = sorted([(w, w.value % 54) for w in self], key = lambda x:x[1])
+        if self.to_valuelist() != sorted_cards:
             self.clear()
             for card, _ in sorted_cards:
                 self.add_card(card)
@@ -205,10 +225,23 @@ class CardPile(arcade.SpriteList):
                     card.face = face_status_dict[card.value]
 
             if cards_to_add:
-                for value in cards_to_add:
-                    self.add_card(Card(value=value, face=face_status_dict[value]))
+                #NO_AUTO_SORT = 0
+                #AUTO_SORT_NEW_CARD_ONLY = 1
+                #AUTO_SORT_ALL_CARDS = 2
+                if self.auto_sort_setting is None or self.auto_sort_setting == NO_AUTO_SORT:
+                    for value in cards_to_add:
+                        self.add_card(Card(value=value, face=face_status_dict[value]))
+                elif self.auto_sort_setting == AUTO_SORT_NEW_CARD_ONLY:
+                    sorted_cards = sort_cards(self, self.sorting_rule)
+                    for value in sorted_cards:
+                        self.add_card(Card(value=value, face=face_status_dict[value]))
+                else:
+                    for value in cards_to_add:
+                        self.add_card(Card(value=value, face=face_status_dict[value]))
 
         card_added_removed = set.union(cards_to_remove, cards_to_add)
+        if self.auto_sort_setting == AUTO_SORT_ALL_CARDS:
+            self.resort_cards()
         return card_added_removed
 
 
@@ -346,6 +379,8 @@ class ConnectView(arcade.View):
                                  200, starting_y, arcade.color.GOLD, 14)
 
 
+
+
 class GameView(arcade.View):
     """ Main Game View class. """
 
@@ -433,6 +468,8 @@ class GameView(arcade.View):
             mat_boundary=(int(CARD_WIDTH*CARD_SCALE/2), int(CARD_HEIGHT*CARD_SCALE/2)),
             card_scale = CARD_SCALE,
             card_offset = (int(CARD_WIDTH*CARD_SCALE*CARD_OFFSET_PCT),int(CARD_HEIGHT*CARD_SCALE)),
+            sorting_rule=SORT_BY_SUIT_THEN_NUMBER,
+            auto_sort_setting=AUTO_SORT_ALL_CARDS,
             other_properties={'Clearable': False}
         ))
 
@@ -484,6 +521,8 @@ class GameView(arcade.View):
                     mat_boundary = (int(CARD_WIDTH*NORMAL_MAT_SCALE/2), int(CARD_HEIGHT*NORMAL_MAT_SCALE/2)),
                     card_scale = NORMAL_MAT_SCALE,
                     card_offset = (int(CARD_WIDTH*NORMAL_MAT_SCALE*CARD_OFFSET_PCT),int(CARD_HEIGHT*NORMAL_MAT_SCALE*CARD_OFFSET_PCT)),
+                    sorting_rule= SORT_BY_SUIT_THEN_NUMBER,
+                    auto_sort_setting = AUTO_SORT_NEW_CARD_ONLY,
                     other_properties = {'Clearable':True}
                 )
             )
@@ -512,7 +551,9 @@ class GameView(arcade.View):
                     card_scale =SCORE_MAT_SCALE,
                     card_offset=(int(CARD_WIDTH * SCORE_MAT_SCALE * CARD_OFFSET_PCT),
                                  int(CARD_HEIGHT * SCORE_MAT_SCALE * CARD_OFFSET_PCT)),
-                    other_properties={'Clearable': False}
+                    sorting_rule=SORT_BY_NUMBER_THEN_SUIT,
+                    auto_sort_setting=NO_AUTO_SORT,
+                    other_properties={'Clearable'}
                 )
             )
             if player_index == self.self_player_index:
@@ -534,6 +575,8 @@ class GameView(arcade.View):
                 card_scale =SCORE_MAT_SCALE,
                 card_offset=(int(CARD_WIDTH * SCORE_MAT_SCALE * CARD_OFFSET_PCT),
                              int(CARD_HEIGHT * SCORE_MAT_SCALE * CARD_OFFSET_PCT)),
+                sorting_rule=DO_NOT_SORT,
+                auto_sort_setting=NO_AUTO_SORT,
                 other_properties={'Clearable': False}
             )
         )
@@ -553,6 +596,8 @@ class GameView(arcade.View):
                 card_scale =SCORE_MAT_SCALE,
                 card_offset=(int(CARD_WIDTH * SCORE_MAT_SCALE * CARD_OFFSET_PCT),
                              int(CARD_HEIGHT * SCORE_MAT_SCALE * CARD_OFFSET_PCT)),
+                sorting_rule=SORT_BY_NUMBER_THEN_SUIT,
+                auto_sort_setting=NO_AUTO_SORT,
                 other_properties={'Clearable': False}
             )
         )
@@ -645,7 +690,7 @@ class GameView(arcade.View):
 
             if button == arcade.MOUSE_BUTTON_RIGHT and (key_modifiers & arcade.key.MOD_ALT):
                 # with control, sort current piles
-                self.card_pile_list[pile_index].sort_cards()
+                self.card_pile_list[pile_index].resort_cards()
             elif button == arcade.MOUSE_BUTTON_RIGHT and (key_modifiers & arcade.key.MOD_CTRL):
                 self.clear_a_pile(pile_index)
             else:
@@ -801,8 +846,8 @@ class GameView(arcade.View):
     def initiate_game_restart(self):
         n_decks= self.n_player
         n_residual_card =  self.n_player*2
-        n_card_per_player = (n_decks * 64 - n_residual_card) // self.n_player
-        n_residual_card = n_decks * 64 - n_card_per_player*self.n_player
+        n_card_per_player = (n_decks * 54 - n_residual_card) // self.n_player
+        n_residual_card = n_decks * 54 - n_card_per_player*self.n_player
         n_card_per_pile = {w: n_card_per_player for w in range(self.n_player)}
         n_card_per_pile[self.n_player*3]=n_residual_card
         new_event = gameutil.Event(type='StartNewGame',
