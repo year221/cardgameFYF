@@ -139,10 +139,13 @@ def sort_cards(card_list, sorting_rule=None):
     #return sorted_cards
 
 SCORE_RULE_510K = 0
+SCORE_RULE_COUNT = 1
 def calculate_score(value_list, score_rule):
     if score_rule == SCORE_RULE_510K:
         score_list = [(w % 54) % 13 for w in value_list]
         return score_list.count(3)*5 + score_list.count(8)*10 + score_list.count(11) *10
+    elif score_rule == SCORE_RULE_COUNT:
+        return len(value_list)
 
 
 
@@ -612,7 +615,7 @@ class GameView(arcade.View):
                 enable_recover_last_removed_cards=False,
                 enable_title=True,
                 title='Your Private Pile',
-                other_properties={'Clearable': False}
+                other_properties={'Clearable': False, 'score_to_display': SCORE_RULE_COUNT}
             ))
             hand_pile_mat.position = HAND_MAT_X, HAND_MAT_Y
             self.pile_mat_list.append(hand_pile_mat)
@@ -633,7 +636,7 @@ class GameView(arcade.View):
                 enable_recover_last_removed_cards=False,
                 enable_title=True,
                 title='Private Pile 2',
-                other_properties={'Clearable': False}
+                other_properties={'Clearable': False, 'score_to_display': SCORE_RULE_COUNT}
             ))
             temp_pile_mat.position = int(HAND_MAT_X + HAND_MAT_WIDTH*CARD_SCALE/2 + MAT_WIDTH*NORMAL_MAT_SCALE*0.6), HAND_MAT_Y
             self.pile_mat_list.append(temp_pile_mat)
@@ -716,7 +719,7 @@ class GameView(arcade.View):
                 enable_recover_last_removed_cards=False,
                 enable_title=True,
                 title='Hidden Pile',
-                other_properties={'Clearable': False}
+                other_properties={'Clearable': False, 'score_to_display': SCORE_RULE_COUNT}
             )
         )
 
