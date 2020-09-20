@@ -57,7 +57,7 @@ MAT_PERCENT_OVERSIZE = 1.25
 MAT_HEIGHT = int(CARD_HEIGHT * MAT_PERCENT_OVERSIZE)
 MAT_WIDTH = int(CARD_WIDTH  * MAT_PERCENT_OVERSIZE * 3.2)
 HAND_MAT_HEIGHT = int(CARD_HEIGHT*2 + MAT_HEIGHT * VERTICAL_MARGIN_PERCENT)
-HAND_MAT_WIDTH = int(CARD_HORIZONTAL_OFFSET * 60 + CARD_WIDTH)
+HAND_MAT_WIDTH = int(CARD_HORIZONTAL_OFFSET * 54 + CARD_WIDTH)
 
 # The Y of the bottom row (2 piles)
 HAND_MAT_Y = HAND_MAT_HEIGHT / 2  * CARD_SCALE + MAT_HEIGHT  * CARD_SCALE * VERTICAL_MARGIN_PERCENT
@@ -576,16 +576,15 @@ class GameView(arcade.View):
         hand_pile_mat.position = HAND_MAT_X, HAND_MAT_Y
         self.pile_mat_list.append(hand_pile_mat)
 
-        temp_pile_mat = Mat(len(self.card_pile_list), int(MAT_WIDTH*NORMAL_MAT_SCALE), int(MAT_HEIGHT*NORMAL_MAT_SCALE),
+        temp_pile_mat = Mat(len(self.card_pile_list), int(MAT_WIDTH*NORMAL_MAT_SCALE), int(HAND_MAT_HEIGHT*CARD_SCALE),
                                    arcade.csscolor.LIGHT_SLATE_GREY)
         self.card_pile_list.append(CardPile(
             card_pile_id=self.self_player_index + self.n_player,
             mat_center=(int(HAND_MAT_X + HAND_MAT_WIDTH*CARD_SCALE/2 + MAT_WIDTH*NORMAL_MAT_SCALE*0.6), HAND_MAT_Y),
-            mat_size =  (int(MAT_WIDTH*NORMAL_MAT_SCALE), int(MAT_HEIGHT*NORMAL_MAT_SCALE)),
-            mat_boundary = (int(CARD_WIDTH*NORMAL_MAT_SCALE/2), int(CARD_HEIGHT*NORMAL_MAT_SCALE/2)),
-            card_scale=NORMAL_MAT_SCALE,
-            card_offset=(int(CARD_WIDTH * NORMAL_MAT_SCALE * CARD_OFFSET_PCT),
-                         int(CARD_HEIGHT * NORMAL_MAT_SCALE * CARD_OFFSET_PCT)),
+            mat_size =  (int(MAT_WIDTH*NORMAL_MAT_SCALE), HAND_MAT_HEIGHT*CARD_SCALE),
+            mat_boundary = (int(CARD_WIDTH*NORMAL_MAT_SCALE/2), int(CARD_HEIGHT*CARD_SCALE/2)),
+            card_scale=CARD_SCALE,
+            card_offset=(int(CARD_WIDTH*CARD_SCALE*CARD_OFFSET_PCT),int(CARD_HEIGHT*CARD_SCALE)),
             sorting_rule=SORT_BY_SUIT_THEN_NUMBER,
             auto_sort_setting=NO_AUTO_SORT,
             enable_sort_button=True,
