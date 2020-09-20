@@ -406,6 +406,10 @@ class ConnectView(arcade.View):
                                           )
         self.event_buffer.append(new_event)
 
+    def get_game_state(self):
+        new_event = gameutil.EventConnect(type='GetGameState')
+        self.event_buffer.append(new_event)
+
     def send_ready(self, text):
         new_event = gameutil.EventConnect(type='PlayerReady',
                                           player_name = self.player_name,
@@ -419,14 +423,15 @@ class ConnectView(arcade.View):
 
     def on_update(self, deltatime):
         if self.game_state:
-            if self.game_state.status=='Start Game View':
-                player_index = self.game_state.player_index_per_id[self.player_id]
-                player_name =  self.game_state.player_name_per_id[self.player_id]
-                n_player = self.game_state.n_player
-                self.ui_manager.purge_ui_elements()
-                game_view = GameView(player_id=self.player_id)
-                game_view.setup(n_player=n_player, player_index=player_index)
-                self.window.show_view(game_view)
+            if self.game_state.status=='Starting New Game':
+                if self.player_id in self.game_state.player_index_per_id:
+                    player_index = self.game_state.player_index_per_id[self.player_id]
+                    player_name =  self.game_state.player_name_per_id[self.player_id]
+                    n_player = self.game_state.n_player
+                    self.ui_manager.purge_ui_elements()
+                    game_view = GameView(player_id=self.player_id)
+                    game_view.setup(n_player=n_player, player_index=player_index)
+                    self.window.show_view(game_view)
 
 
     def setup(self):
@@ -462,6 +467,7 @@ class ConnectView(arcade.View):
             width=700
         )
         self.ui_manager.add_ui_element(clear_button)
+        self.get_game_state()
     def on_show_view(self):
         """ Called once when view is activated. """
         self.setup()
@@ -469,7 +475,9 @@ class ConnectView(arcade.View):
     def on_draw(self):
         arcade.start_render()
         if self.game_state:
-            starting_y = SCREEN_HEIGHT-200
+            starting_y = SCREEN_HEIGHT-150
+            arcade.draw_text(f'Game Status: {self.game_state.status}', 200, starting_y, arcade.color.GOLD, 14)
+            starting_y -= 25
             arcade.draw_text('players name | index', 200, starting_y, arcade.color.GOLD, 14)
             for player_id, player_name in self.game_state.player_name_per_id.items():
                 starting_y -= 25

@@ -18,7 +18,7 @@ class GameState:
     player_index_per_id: Dict[str, int] = field(default_factory=dict)
     player_name: Dict[str, str] = field(default_factory=dict)
     player_name_per_id: Dict[str, str] = field(default_factory=dict)
-    status: str = 'Initialization'
+    status: str = 'Wait for Player to Join'
 
     def to_json(self):
         d = asdict(self)
@@ -27,7 +27,9 @@ class GameState:
     def update_from_event(self, event):
         #print(event)
         #print(self.cards_in_pile.keys())
-        if event.type == 'Move':
+        if event.type == 'GetGameState':
+            return [copy.deepcopy(self)]
+        elif event.type == 'Move':
             if event.src_pile in self.cards_in_pile.keys() and event.dst_pile in self.cards_in_pile.keys():
 
                 if not (set(event.cards) - set(self.cards_in_pile[event.src_pile])):
@@ -112,7 +114,7 @@ class GameState:
                     self.player_index_per_id = {key:sorted_index.index(val) for key, val in self.player_index_per_id.items()}
                     self.player_name = {index_val: self.player_name_per_id[player_id] for player_id, index_val in self.player_index_per_id.items()}
                     self.n_player = len(self.player_index_per_id)
-                    self.status = 'Start Game View'
+                    self.status = 'Starting New Game'
                 return [copy.deepcopy(self)]
             else:
                 return []
