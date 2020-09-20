@@ -573,12 +573,34 @@ class GameView(arcade.View):
             title='Your Private Pile',
             other_properties={'Clearable': False}
         ))
-
         hand_pile_mat.position = HAND_MAT_X, HAND_MAT_Y
         self.pile_mat_list.append(hand_pile_mat)
+
+        temp_pile_mat = Mat(len(self.card_pile_list), int(MAT_WIDTH*NORMAL_MAT_SCALE), int(MAT_HEIGHT*NORMAL_MAT_SCALE),
+                                   arcade.csscolor.LIGHT_SLATE_GREY)
+        self.card_pile_list.append(CardPile(
+            card_pile_id=self.self_player_index + self.n_player,
+            mat_center=(int(HAND_MAT_X + HAND_MAT_WIDTH*CARD_SCALE/2 + MAT_WIDTH*NORMAL_MAT_SCALE*0.6), HAND_MAT_Y),
+            mat_size =  (int(MAT_WIDTH*NORMAL_MAT_SCALE), int(MAT_HEIGHT*NORMAL_MAT_SCALE)),
+            mat_boundary = (int(CARD_WIDTH*NORMAL_MAT_SCALE/2), int(CARD_HEIGHT*NORMAL_MAT_SCALE/2)),
+            card_scale=NORMAL_MAT_SCALE,
+            card_offset=(int(CARD_WIDTH * NORMAL_MAT_SCALE * CARD_OFFSET_PCT),
+                         int(CARD_HEIGHT * NORMAL_MAT_SCALE * CARD_OFFSET_PCT)),
+            sorting_rule=SORT_BY_SUIT_THEN_NUMBER,
+            auto_sort_setting=NO_AUTO_SORT,
+            enable_sort_button=True,
+            enable_clear_button=False,
+            enable_recover_last_removed_cards=False,
+            enable_title=True,
+            title='Private Pile 2',
+            other_properties={'Clearable': False}
+        ))
+        temp_pile_mat.position = int(HAND_MAT_X + HAND_MAT_WIDTH*CARD_SCALE/2 + MAT_WIDTH*NORMAL_MAT_SCALE*0.6), HAND_MAT_Y
+        self.pile_mat_list.append(temp_pile_mat)
+
         #self.pile_text_list.append(('Your Private Pile', hand_pile_mat.center_x-50, hand_pile_mat.center_y, arcade.color.GOLD, 15))
-        starting_x = hand_pile_mat.right+20
-        starting_y = hand_pile_mat.top - 20
+        #starting_x = hand_pile_mat.right+20
+        #starting_y = hand_pile_mat.top - 20
         step_y = 20
         # self.pile_text_list.append(
         #     ("Left press/release to drag", starting_x, starting_y, arcade.csscolor.GOLD, 15))
@@ -606,7 +628,7 @@ class GameView(arcade.View):
         #self.ui_manager.add_ui_element(button)
 
         # main output piles for each player
-        starting_index_output_pile = self.n_player
+        starting_index_output_pile = 2* self.n_player
         for player_index in range(self.n_player):
             pile_ls_index = len(self.card_pile_list)
             pile_position = calculate_main_pile_positions(player_index, self.n_player, self.self_player_index)
@@ -642,7 +664,7 @@ class GameView(arcade.View):
             #    (player_index, pile.center_x - 50, pile.center_y-20, arcade.color.DARK_GRAY, 10)
             #)
         # score piles for each player
-        starting_index_score_pile = self.n_player*2
+        starting_index_score_pile = self.n_player*3
         for player_index in range(self.n_player):
 
             pile_position = calculate_score_pile_positions(player_index, self.n_player, self.self_player_index)
@@ -675,7 +697,7 @@ class GameView(arcade.View):
         self.pile_mat_list.append(pile)
         self.card_pile_list.append(
             CardPile(
-                card_pile_id=self.n_player*3,
+                card_pile_id=self.n_player*4,
                 mat_center=pile.position,
                 mat_size=(int(MAT_WIDTH * 0.5), int(MAT_HEIGHT * SCORE_MAT_SCALE)),
                 mat_boundary=(int(CARD_WIDTH * SCORE_MAT_SCALE/2), int(CARD_HEIGHT * SCORE_MAT_SCALE/2)),
@@ -701,7 +723,7 @@ class GameView(arcade.View):
         self.pile_mat_list.append(pile)
         self.card_pile_list.append(
             CardPile(
-                card_pile_id=self.n_player*3+1,
+                card_pile_id=self.n_player*4+1,
                 mat_center=pile.position,
                 mat_size=(int(MAT_WIDTH), int(MAT_HEIGHT * SCORE_MAT_SCALE)),
                 mat_boundary=(int(CARD_WIDTH * SCORE_MAT_SCALE/2), int(CARD_HEIGHT * SCORE_MAT_SCALE/2)),
@@ -1014,13 +1036,13 @@ class GameView(arcade.View):
         n_card_per_player = (n_decks * 54 - n_residual_card) // self.n_player
         n_residual_card = n_decks * 54 - n_card_per_player*self.n_player
         n_card_per_pile = {w: n_card_per_player for w in range(self.n_player)}
-        n_card_per_pile[self.n_player*3]=n_residual_card
+        n_card_per_pile[self.n_player*4]=n_residual_card
         new_event = gameutil.Event(type='StartNewGame',
                                    player_index=self.self_player_index,
                                    n_player = self.n_player,
                                    n_pile = self.n_pile,
                                    n_card_per_pile = n_card_per_pile,
-                                   face_down_pile = [self.n_player*3],
+                                   face_down_pile = [self.n_player*4],
                                    )
         self.event_buffer.append(new_event)
 
