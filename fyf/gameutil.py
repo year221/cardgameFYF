@@ -149,9 +149,9 @@ class EventCardChange:
 @dataclass
 class EventGameControl:
     type: str
-    n_player : int = 6
+    n_player : int = 0
     n_card_per_pile : Dict[int, int] = field(default_factory=dict)
-    n_pile : int = 19
+    n_pile : int = 0
     face_down_pile : List[int] = field(default_factory=list)
     player_id: str = ''
 

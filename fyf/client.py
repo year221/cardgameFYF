@@ -567,7 +567,7 @@ class GameView(arcade.View):
         """ Set up the game here. Call this function to restart the game. """
         self.ui_manager.purge_ui_elements()
         self.n_player = n_player
-        self.n_pile = self.n_player *3+2
+        self.n_pile = self.n_player *4+2
         self.self_player_index = player_index
 
         # List of cards we are dragging with the mouse
@@ -746,9 +746,8 @@ class GameView(arcade.View):
                 other_properties={'Clearable': False}
             )
         )
-        #self.pile_text_list.append(
-        #    ("Hidden pile", pile.center_x - 50, pile.center_y, arcade.csscolor.DARK_GRAY, 10))
 
+        # PUBLIC POLE
         pile = Mat(len(self.card_pile_list),
                      MAT_WIDTH, int(MAT_HEIGHT*0.3), arcade.csscolor.DARK_SLATE_GRAY)
         pile.position = int(MAT_WIDTH * 1.2), MID_CARD_Y
