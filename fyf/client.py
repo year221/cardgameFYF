@@ -381,8 +381,6 @@ class ConnectView(arcade.View):
                                           )
         self.event_buffer.append(new_event)
 
-
-
     def send_ready(self, text):
         new_event = gameutil.EventConnect(type='PlayerReady',
                                           player_name = self.player_name,
@@ -453,8 +451,6 @@ class ConnectView(arcade.View):
                 starting_y -= 25
                 arcade.draw_text(f'{player_name} | {str(self.game_state.player_index_per_id[player_id]) if player_id in self.game_state.player_index_per_id else "not ready"}',
                                  200, starting_y, arcade.color.GOLD, 14)
-
-
 
 
 class GameView(arcade.View):
