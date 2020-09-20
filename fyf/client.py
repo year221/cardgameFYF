@@ -12,7 +12,7 @@ import arcade
 import os
 import argparse
 import gameutil, clientutil
-from clientutil import Mat, Card, GameFlatButton
+from clientutil import Mat, Card, GameFlatButton,GameTextLabel
 from arcade import gui
 from arcade.gui import UIEvent, TEXT_INPUT,UIInputBox
 import copy
@@ -55,7 +55,7 @@ HORIZONTAL_MARGIN_PERCENT = 0.10
 # How big is the mat we'll place the card on?
 MAT_PERCENT_OVERSIZE = 1.25
 MAT_HEIGHT = int(CARD_HEIGHT * MAT_PERCENT_OVERSIZE)
-MAT_WIDTH = int(CARD_WIDTH  * MAT_PERCENT_OVERSIZE * 3)
+MAT_WIDTH = int(CARD_WIDTH  * MAT_PERCENT_OVERSIZE * 3.2)
 HAND_MAT_HEIGHT = int(CARD_HEIGHT*2 + MAT_HEIGHT * VERTICAL_MARGIN_PERCENT)
 HAND_MAT_WIDTH = int(CARD_HORIZONTAL_OFFSET * 60 + CARD_WIDTH)
 
@@ -69,8 +69,8 @@ STARTING_X = MAT_WIDTH * HORIZONTAL_MARGIN_PERCENT
 TOP_OUTPUT_ROW_Y = (SCREEN_HEIGHT * 10.5) // 12
 BOTTOM_OUTPUT_ROW_Y = (SCREEN_HEIGHT * 4.5) // 12
 MID_CARD_Y = (SCREEN_HEIGHT * 7.5)//12
-TOP_SCORE_ROW_Y = (SCREEN_HEIGHT * 9) // 12
-BOTTOM_SCORE_ROW_Y = (SCREEN_HEIGHT * 6) // 12
+TOP_SCORE_ROW_Y = (SCREEN_HEIGHT * 8.8) // 12
+BOTTOM_SCORE_ROW_Y = (SCREEN_HEIGHT * 6.2) // 12
 
 PILE_SEPARATION_X =  CARD_WIDTH
 
@@ -140,12 +140,13 @@ def sort_cards(card_list, sorting_rule=None):
 
 PILE_BUTTON_HEIGHT=12
 PILE_BUTTON_FONTSIZE=8
+N_ELEMENT_PER_PILE=4
 class CardPile(arcade.SpriteList):
     """ Card sprite """
 
     def __init__(self, card_pile_id, mat_center, mat_size, mat_boundary, card_scale, card_offset, sorting_rule=None, auto_sort_setting=None,
                  enable_sort_button=True, enable_clear_button=False, enable_recover_last_removed_cards=False, clear_action=None, recover_action=None,
-                 other_properties=None, *args, **kwargs):
+                 enable_title = False, title=None, other_properties=None, *args, **kwargs):
         """ Card constructor """
 
         super().__init__( *args, **kwargs)
@@ -168,6 +169,10 @@ class CardPile(arcade.SpriteList):
         self.enable_recover_last_removed_cards = enable_recover_last_removed_cards
         self.recover_button = None
         self.recover_action = recover_action
+        self._title_label = None
+        self.enable_title = enable_title
+        self._title = '' if title is None else title
+
         self._last_removed_card_values = []
         self._last_removed_face_status = {}
         self.other_properties = copy.deepcopy(other_properties)
@@ -194,17 +199,38 @@ class CardPile(arcade.SpriteList):
         self._last_removed_face_status={}
         return card_recovered, face_status
 
+    @property
+    def title(self):
+        return self._title
+    @title.setter
+    def title(self, x):
+        if x is None:
+            self._title = ''
+        else:
+            self._title = x
+        if self._title_label is not None:
+            self._title_label.text = self._title
+
     def get_ui_elements(self):
         all_elements = []
+        if self.enable_title:
+            if self._title_label is None:
+                self._title_label = GameTextLabel(
+                    text=self._title,
+                    font_size = PILE_BUTTON_FONTSIZE,
+                    center_x=self.mat_center[0] - self.mat_size[0] // 2 + int(self.mat_size[0] / N_ELEMENT_PER_PILE / 2),
+                    center_y=self.mat_center[1] + self.mat_size[1] // 2 + PILE_BUTTON_HEIGHT // 2,
+                )
+            all_elements.append(self._title_label)
         if self.enable_sort_button:
             if self.sort_button is None:
                 self.sort_button = GameFlatButton(
                     self.resort_cards,
                     font_size = PILE_BUTTON_FONTSIZE,
                     text='SORT',
-                    center_x=self.mat_center[0]-self.mat_size[0]//2+int(self.mat_size[0]/3/2),
+                    center_x=self.mat_center[0]-self.mat_size[0]//2+int(self.mat_size[0]/N_ELEMENT_PER_PILE/2*3),
                     center_y=self.mat_center[1]+self.mat_size[1]//2+PILE_BUTTON_HEIGHT//2,
-                    width=int(self.mat_size[0]/3),
+                    width=int(self.mat_size[0]/N_ELEMENT_PER_PILE),
                     height=PILE_BUTTON_HEIGHT
                 )
             all_elements.append(self.sort_button)
@@ -216,9 +242,9 @@ class CardPile(arcade.SpriteList):
                         self.clear_action,
                         font_size=PILE_BUTTON_FONTSIZE,
                         text='CLEAR',
-                        center_x=self.mat_center[0]-self.mat_size[0]//2+int(self.mat_size[0]/6*3),
+                        center_x=self.mat_center[0]-self.mat_size[0]//2+int(self.mat_size[0]/N_ELEMENT_PER_PILE/2*5),
                         center_y=self.mat_center[1]+self.mat_size[1]//2+PILE_BUTTON_HEIGHT//2,
-                        width=int(self.mat_size[0]/3),
+                        width=int(self.mat_size[0]/N_ELEMENT_PER_PILE),
                         height=PILE_BUTTON_HEIGHT
                     )
             all_elements.append(self.clear_button)
@@ -227,10 +253,10 @@ class CardPile(arcade.SpriteList):
                 self.recover_button = GameFlatButton(
                     self.recover_action,
                     font_size=PILE_BUTTON_FONTSIZE,
-                    text='RECOVER',
-                    center_x=self.mat_center[0]-self.mat_size[0]//2+int(self.mat_size[0]/6*5),
+                    text='UNDO CLEAR',
+                    center_x=self.mat_center[0]-self.mat_size[0]//2+int(self.mat_size[0]/N_ELEMENT_PER_PILE/2*7),
                     center_y=self.mat_center[1]+self.mat_size[1]//2+PILE_BUTTON_HEIGHT//2,
-                    width=int(self.mat_size[0]/3),
+                    width=int(self.mat_size[0]/N_ELEMENT_PER_PILE),
                     height=PILE_BUTTON_HEIGHT
                 )
             all_elements.append(self.recover_button)
@@ -465,7 +491,7 @@ class GameView(arcade.View):
         else:
             self.player_id = player_id
         #self.player_name = player_name
-        self.player_name_display_list = None
+        #self.player_name_display_list = None
         self.n_player = None
         self.self_player_index = None
         self.n_decks = None
@@ -604,16 +630,17 @@ class GameView(arcade.View):
                     clear_action=lambda: self.clear_a_pile(pile_index=pile_ls_index),
                     enable_recover_last_removed_cards=True,
                     recover_action=lambda: self.recover_card_to_a_pile(pile_index=pile_ls_index),
-                    other_properties = {'Clearable':True}
+                    enable_title=True,
+                    other_properties = {'Clearable':True, 'player_index': player_index}
                 )
             )
             if player_index == self.self_player_index:
                 self.pile_text_list.append(
                     ('Lay your card here', pile.center_x-50, pile.center_y, arcade.color.DARK_GRAY, 10))
 
-            self.player_name_display_list.append(
-                (player_index, pile.center_x - 50, pile.center_y-20, arcade.color.DARK_GRAY, 10)
-            )
+            #self.player_name_display_list.append(
+            #    (player_index, pile.center_x - 50, pile.center_y-20, arcade.color.DARK_GRAY, 10)
+            #)
         # score piles for each player
         starting_index_score_pile = self.n_player*2
         for player_index in range(self.n_player):
@@ -713,7 +740,7 @@ class GameView(arcade.View):
                 connect_view.setup()
                 self.window.show_view(connect_view)
                 return
-            if self.game_state.status=='New Game':
+            elif self.game_state.status=='New Game':
 
                 self.game_state.status='Game'
                 self.clear_all_piles()
@@ -742,6 +769,13 @@ class GameView(arcade.View):
                             self.active_cards.remove(self.active_cards[index])
                             active_cards_value.remove(active_cards_value[index])
 
+                if w.enable_title:
+                    if 'player_index' in w.other_properties:
+                        if w.other_properties['player_index'] in self.game_state.player_name:
+                            if w.title!=self.game_state.player_name[w.other_properties['player_index']]:
+                                w.title = self.game_state.player_name[w.other_properties['player_index']]
+
+
     def on_draw(self):
         """ Render the screen. """
         arcade.start_render()
@@ -752,10 +786,10 @@ class GameView(arcade.View):
         # draw text
         for text, x, y, color, size in self.pile_text_list:
             arcade.draw_text(text, x, y, color, size)
-        if self.game_state:
-            for player_index, x, y, color, size in self.player_name_display_list:
-                if player_index in self.game_state.player_name:
-                    arcade.draw_text(self.game_state.player_name[player_index], x, y, color, size)
+        #if self.game_state:
+        #    for player_index, x, y, color, size in self.player_name_display_list:
+        #        if player_index in self.game_state.player_name:
+        #            arcade.draw_text(self.game_state.player_name[player_index], x, y, color, size)
         # Draw the cards
         for card_pile in self.card_pile_list[::-1]:
             card_pile.draw()
