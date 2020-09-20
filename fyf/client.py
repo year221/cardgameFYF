@@ -509,7 +509,7 @@ class GameView(arcade.View):
 
         # Sprite list with all the mats tha cards lay on.
         self.pile_mat_list = None
-        self.pile_text_list = None
+        #self.pile_text_list = None
         self.card_pile_list = None
 
     @property
@@ -551,8 +551,8 @@ class GameView(arcade.View):
 
         # Sprite list with all the mats tha cards lay on.
         self.pile_mat_list: arcade.SpriteList = arcade.SpriteList(is_static=True)
-        self.pile_text_list = []
-        self.player_name_display_list = []
+        #self.pile_text_list = []
+        #self.player_name_display_list = []
 
         # own pile
 
@@ -571,31 +571,33 @@ class GameView(arcade.View):
             enable_sort_button=True,
             enable_clear_button=False,
             enable_recover_last_removed_cards=False,
+            enable_title=True,
+            title='Your Private Pile',
             other_properties={'Clearable': False}
         ))
 
         hand_pile_mat.position = HAND_MAT_X, HAND_MAT_Y
         self.pile_mat_list.append(hand_pile_mat)
-        self.pile_text_list.append(('Your Private Pile', hand_pile_mat.center_x-50, hand_pile_mat.center_y, arcade.color.GOLD, 15))
+        #self.pile_text_list.append(('Your Private Pile', hand_pile_mat.center_x-50, hand_pile_mat.center_y, arcade.color.GOLD, 15))
         starting_x = hand_pile_mat.right+20
         starting_y = hand_pile_mat.top - 20
         step_y = 20
-        self.pile_text_list.append(
-            ("Left press/release to drag", starting_x, starting_y, arcade.csscolor.GOLD, 15))
-        self.pile_text_list.append(
-            ("Right click to flip a card", starting_x, starting_y-step_y, arcade.csscolor.GOLD, 15))
-        self.pile_text_list.append(
-            ("CTRL + right click to clear a pile", starting_x, starting_y-step_y*2, arcade.csscolor.GOLD,
-             15))
-        self.pile_text_list.append(
-            ("ALT + right click to sort a pile", starting_x, starting_y-step_y*3, arcade.csscolor.GOLD,
-             15))
-        self.pile_text_list.append(
-            ("CLRT + R to reset the game", starting_x, starting_y-step_y*4, arcade.csscolor.GOLD,
-             15))
-        self.pile_text_list.append(
-            ("CLRT + Q to reset the game and return to login", starting_x, starting_y-step_y*5, arcade.csscolor.GOLD,
-             15))
+        # self.pile_text_list.append(
+        #     ("Left press/release to drag", starting_x, starting_y, arcade.csscolor.GOLD, 15))
+        # self.pile_text_list.append(
+        #     ("Right click to flip a card", starting_x, starting_y-step_y, arcade.csscolor.GOLD, 15))
+        # self.pile_text_list.append(
+        #     ("CTRL + right click to clear a pile", starting_x, starting_y-step_y*2, arcade.csscolor.GOLD,
+        #      15))
+        # self.pile_text_list.append(
+        #     ("ALT + right click to sort a pile", starting_x, starting_y-step_y*3, arcade.csscolor.GOLD,
+        #      15))
+        # self.pile_text_list.append(
+        #     ("CLRT + R to reset the game", starting_x, starting_y-step_y*4, arcade.csscolor.GOLD,
+        #      15))
+        # self.pile_text_list.append(
+        #     ("CLRT + Q to reset the game and return to login", starting_x, starting_y-step_y*5, arcade.csscolor.GOLD,
+        #      15))
         # button = gui.UIFlatButton(
         #     'sort',
         #     center_x=int(hand_pile_mat.right-SORT_BUTTON_WIDTH//2),
@@ -634,9 +636,9 @@ class GameView(arcade.View):
                     other_properties = {'Clearable':True, 'player_index': player_index}
                 )
             )
-            if player_index == self.self_player_index:
-                self.pile_text_list.append(
-                    ('Lay your card here', pile.center_x-50, pile.center_y, arcade.color.DARK_GRAY, 10))
+            #if player_index == self.self_player_index:
+            #    self.pile_text_list.append(
+            #        ('Lay your card here', pile.center_x-50, pile.center_y, arcade.color.DARK_GRAY, 10))
 
             #self.player_name_display_list.append(
             #    (player_index, pile.center_x - 50, pile.center_y-20, arcade.color.DARK_GRAY, 10)
@@ -664,15 +666,11 @@ class GameView(arcade.View):
                     enable_sort_button=True,
                     enable_clear_button=False,
                     enable_recover_last_removed_cards=False,
+                    enable_title=True,
+                    title='Cards won',
                     other_properties={'Clearable'}
                 )
             )
-            if player_index == self.self_player_index:
-               self.pile_text_list.append(
-                    ('Cards you scored', pile.center_x-50, pile.center_y, arcade.csscolor.DARK_GRAY, 10))
-            #else:
-            #    self.pile_text_list.append(
-            #        ("Public: other's scored cards", pile.center_x-50, pile.center_y, arcade.csscolor.DARK_GRAY, 10))
 
         pile = Mat(len(self.card_pile_list), int(MAT_WIDTH*0.5), int(MAT_HEIGHT*0.3), arcade.csscolor.DARK_SLATE_BLUE)
         pile.position = int(MAT_WIDTH * 0.35), MID_CARD_Y
@@ -691,11 +689,13 @@ class GameView(arcade.View):
                 enable_sort_button=False,
                 enable_clear_button=False,
                 enable_recover_last_removed_cards=False,
+                enable_title=True,
+                title='Hidden Pile',
                 other_properties={'Clearable': False}
             )
         )
-        self.pile_text_list.append(
-            ("Hidden pile", pile.center_x - 50, pile.center_y, arcade.csscolor.DARK_GRAY, 10))
+        #self.pile_text_list.append(
+        #    ("Hidden pile", pile.center_x - 50, pile.center_y, arcade.csscolor.DARK_GRAY, 10))
 
         pile = Mat(len(self.card_pile_list),
                      MAT_WIDTH, int(MAT_HEIGHT*0.3), arcade.csscolor.DARK_SLATE_GRAY)
@@ -715,17 +715,40 @@ class GameView(arcade.View):
                 enable_sort_button=True,
                 enable_clear_button=False,
                 enable_recover_last_removed_cards=False,
+                enable_title=True,
+                title='Aggregate Cards Won',
                 other_properties={'Clearable': False}
             )
         )
-        self.pile_text_list.append(
-            ("Public: all scored cards", pile.center_x - 50, pile.center_y, arcade.csscolor.DARK_GRAY, 10))
+        #self.pile_text_list.append(
+        #    ("Public: all scored cards", pile.center_x - 50, pile.center_y, arcade.csscolor.DARK_GRAY, 10))
 
         for card_pile in self.card_pile_list:
             new_ui_elments = card_pile.get_ui_elements()
             for element in new_ui_elments:
                 self.ui_manager.add_ui_element(element)
 
+        new_game_button = GameFlatButton(
+                        self.initiate_game_restart,
+                        font_size=12,
+                        bg_color=arcade.color.DARK_RED,
+                        text='New Game Round',
+                        center_x=int(MAT_WIDTH * 2),
+                        center_y=MID_CARD_Y+20,
+                        width=200,
+                        height=30)
+        self.ui_manager.add_ui_element(new_game_button)
+
+        quit_game_button = GameFlatButton(
+                        self.reset_player_and_game,
+                        font_size=12,
+                        bg_color=arcade.color.DARK_RED,
+                        text='Leave and Reset Game',
+                        center_x=int(MAT_WIDTH * 2),
+                        center_y= MID_CARD_Y-20,
+                        width=200,
+                        height=30)
+        self.ui_manager.add_ui_element(quit_game_button)
     # def update_game_state(self, gs_dict):
     #     """ update game state from gs_dict """
     #     # no GUI change is allowed in this function
@@ -784,8 +807,8 @@ class GameView(arcade.View):
         self.pile_mat_list.draw()
 
         # draw text
-        for text, x, y, color, size in self.pile_text_list:
-            arcade.draw_text(text, x, y, color, size)
+        #for text, x, y, color, size in self.pile_text_list:
+        #    arcade.draw_text(text, x, y, color, size)
         #if self.game_state:
         #    for player_index, x, y, color, size in self.player_name_display_list:
         #        if player_index in self.game_state.player_name:
