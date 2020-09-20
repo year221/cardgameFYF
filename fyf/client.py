@@ -183,10 +183,9 @@ class CardPile(arcade.SpriteList):
         self._last_removed_face_status = self._cached_face_status
         self._cached_values = []
         self._cached_face_status = {}
-        print(self.__len__())
         while self.__len__() > 0:
             self.pop()
-        print('clear')
+
 
     def recover_removed_card(self):
         """ recover previously cleared cards"""
@@ -415,7 +414,6 @@ class ConnectView(arcade.View):
         self.event_buffer.append(new_event)
 
     def reset_player_and_game(self):
-        print('reset')
         new_event = gameutil.EventConnect(type='ResetPlayerAndGame')
         self.event_buffer.append(new_event)
 
@@ -819,12 +817,13 @@ class GameView(arcade.View):
 
     def on_key_press(self, symbol: int, modifiers: int):
          """ User presses key """
-         if symbol == arcade.key.R:
-             if modifiers & arcade.key.MOD_CTRL:
-                self.initiate_game_restart()
-         if symbol == arcade.key.Q:
-             if modifiers & arcade.key.MOD_CTRL:
-                self.reset_player_and_game()
+         pass
+         # if symbol == arcade.key.R:
+         #     if modifiers & arcade.key.MOD_CTRL:
+         #        self.initiate_game_restart()
+         # if symbol == arcade.key.Q:
+         #     if modifiers & arcade.key.MOD_CTRL:
+         #        self.reset_player_and_game()
     def get_pile_index_for_card(self, card):
         """ What pile is this card in? """
 
@@ -1004,7 +1003,7 @@ class GameView(arcade.View):
 
 
     def reset_player_and_game(self):
-        print('reset')
+        #print('reset')
         new_event = gameutil.EventConnect(type='ResetPlayerAndGame')
         self.event_buffer.append(new_event)
 
