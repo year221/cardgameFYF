@@ -108,16 +108,30 @@ class GameState:
                     assigned_index = min(set(range(len(self.player_name_per_id))) - set(self.player_index_per_id.values()))
                     self.player_index_per_id.update({event.player_id:assigned_index})
 
-                if sorted(self.player_index_per_id.keys()) == sorted(self.player_name_per_id.keys()) and (len(self.player_index_per_id) >=1):
+                if sorted(self.player_index_per_id.keys()) == sorted(self.player_name_per_id.keys()) and (any([w>=0 for key, w in self.player_index_per_id.items()])):
                     # all player recognized. Start game
-                    sorted_index = sorted(self.player_index_per_id.values())
-                    self.player_index_per_id = {key:sorted_index.index(val) for key, val in self.player_index_per_id.items()}
-                    self.player_name = {index_val: self.player_name_per_id[player_id] for player_id, index_val in self.player_index_per_id.items()}
-                    self.n_player = len(self.player_index_per_id)
+                    all_non_zero_ids = [w for key, w in self.player_index_per_id.items() if w>=0]
+                    sorted_index = sorted(all_non_zero_ids)
+                    self.player_index_per_id = {key:(sorted_index.index(val) if val>=0 else val) for key, val in self.player_index_per_id.items()}
+                    self.player_name = {index_val: self.player_name_per_id[player_id] for player_id, index_val in self.player_index_per_id.items() if index_val >0}
+                    self.n_player = len(all_non_zero_ids)
                     self.status = 'Starting New Game'
                 return [copy.deepcopy(self)]
             else:
                 return []
+        elif event.type == 'Observe':
+            self.player_name_per_id.update({event.player_id: event.player_name})
+            self.player_index_per_id.update({event.player_id: -1})
+            if self.status == 'Wait for Player to Join':
+                if sorted(self.player_index_per_id.keys()) == sorted(self.player_name_per_id.keys()) and (any([w>=0 for key, w in self.player_index_per_id.items()])):
+                    # all player recognized. Start game
+                    all_non_zero_ids = [w for key, w in self.player_index_per_id.items() if w>=0]
+                    sorted_index = sorted(all_non_zero_ids)
+                    self.player_index_per_id = {key:(sorted_index.index(val) if val>=0 else val) for key, val in self.player_index_per_id.items()}
+                    self.player_name = {index_val: self.player_name_per_id[player_id] for player_id, index_val in self.player_index_per_id.items() if index_val >0}
+                    self.n_player = len(all_non_zero_ids)
+                    self.status = 'Starting New Game'
+            return [copy.deepcopy(self)]
 
 
 
