@@ -138,6 +138,14 @@ def sort_cards(card_list, sorting_rule=None):
         return [w for w, _ in sorted_cards]
     #return sorted_cards
 
+SCORE_RULE_510K = 0
+def calculate_score(value_list, score_rule):
+    if score_rule == SCORE_RULE_510K:
+        score_list = [(w % 54) % 13 for w in value_list]
+        return score_list.count(3)*5 + score_list.count(8)*10 + score_list.count(11) *10
+
+
+
 PILE_BUTTON_HEIGHT=12
 PILE_BUTTON_FONTSIZE=8
 N_ELEMENT_PER_PILE=4
@@ -630,35 +638,6 @@ class GameView(arcade.View):
             temp_pile_mat.position = int(HAND_MAT_X + HAND_MAT_WIDTH*CARD_SCALE/2 + MAT_WIDTH*NORMAL_MAT_SCALE*0.6), HAND_MAT_Y
             self.pile_mat_list.append(temp_pile_mat)
 
-        #self.pile_text_list.append(('Your Private Pile', hand_pile_mat.center_x-50, hand_pile_mat.center_y, arcade.color.GOLD, 15))
-        #starting_x = hand_pile_mat.right+20
-        #starting_y = hand_pile_mat.top - 20
-        step_y = 20
-        # self.pile_text_list.append(
-        #     ("Left press/release to drag", starting_x, starting_y, arcade.csscolor.GOLD, 15))
-        # self.pile_text_list.append(
-        #     ("Right click to flip a card", starting_x, starting_y-step_y, arcade.csscolor.GOLD, 15))
-        # self.pile_text_list.append(
-        #     ("CTRL + right click to clear a pile", starting_x, starting_y-step_y*2, arcade.csscolor.GOLD,
-        #      15))
-        # self.pile_text_list.append(
-        #     ("ALT + right click to sort a pile", starting_x, starting_y-step_y*3, arcade.csscolor.GOLD,
-        #      15))
-        # self.pile_text_list.append(
-        #     ("CLRT + R to reset the game", starting_x, starting_y-step_y*4, arcade.csscolor.GOLD,
-        #      15))
-        # self.pile_text_list.append(
-        #     ("CLRT + Q to reset the game and return to login", starting_x, starting_y-step_y*5, arcade.csscolor.GOLD,
-        #      15))
-        # button = gui.UIFlatButton(
-        #     'sort',
-        #     center_x=int(hand_pile_mat.right-SORT_BUTTON_WIDTH//2),
-        #     center_y=int(hand_pile_mat.bottom+BUTTON_HEIGHT//2),
-        #     width=SORT_BUTTON_WIDTH,
-        #     height=BUTTON_HEIGHT
-        # )
-        #self.ui_manager.add_ui_element(button)
-
         # main output piles for each player
         starting_index_output_pile = 2* self.n_player
         for player_index in range(self.n_player):
@@ -685,16 +664,10 @@ class GameView(arcade.View):
                     enable_recover_last_removed_cards=True,
                     recover_action=lambda: self.recover_card_to_a_pile(pile_index=pile_ls_index),
                     enable_title=True,
-                    other_properties = {'Clearable':True, 'player_index': player_index}
+                    other_properties = {'Clearable':True, 'player_index_to_display': player_index}
                 )
             )
-            #if player_index == self.self_player_index:
-            #    self.pile_text_list.append(
-            #        ('Lay your card here', pile.center_x-50, pile.center_y, arcade.color.DARK_GRAY, 10))
 
-            #self.player_name_display_list.append(
-            #    (player_index, pile.center_x - 50, pile.center_y-20, arcade.color.DARK_GRAY, 10)
-            #)
         # score piles for each player
         starting_index_score_pile = self.n_player*3
         for player_index in range(self.n_player):
@@ -720,7 +693,7 @@ class GameView(arcade.View):
                     enable_recover_last_removed_cards=False,
                     enable_title=True,
                     title='Cards won',
-                    other_properties={'Clearable'}
+                    other_properties={'Clearable':False, 'score_to_display':SCORE_RULE_510K}
                 )
             )
 
@@ -768,11 +741,9 @@ class GameView(arcade.View):
                 enable_recover_last_removed_cards=False,
                 enable_title=True,
                 title='Aggregate Cards Won',
-                other_properties={'Clearable': False}
+                other_properties={'Clearable': False, 'score_to_display':SCORE_RULE_510K}
             )
         )
-        #self.pile_text_list.append(
-        #    ("Public: all scored cards", pile.center_x - 50, pile.center_y, arcade.csscolor.DARK_GRAY, 10))
 
         for card_pile in self.card_pile_list:
             new_ui_elments = card_pile.get_ui_elements()
@@ -800,10 +771,7 @@ class GameView(arcade.View):
                         width=200,
                         height=30)
         self.ui_manager.add_ui_element(quit_game_button)
-    # def update_game_state(self, gs_dict):
-    #     """ update game state from gs_dict """
-    #     # no GUI change is allowed in this function
-    #     self.game_state = gameutil.GameState(**gs_dict)
+
 
     def on_update(self, delta_time):
         """ on update, which is called in the event loop."""
@@ -844,10 +812,15 @@ class GameView(arcade.View):
                             active_cards_value.remove(active_cards_value[index])
 
                 if w.enable_title:
-                    if 'player_index' in w.other_properties:
-                        if w.other_properties['player_index'] in self.game_state.player_name:
-                            if w.title!=self.game_state.player_name[w.other_properties['player_index']]:
-                                w.title = self.game_state.player_name[w.other_properties['player_index']]
+                    if 'player_index_to_display' in w.other_properties:
+                        if w.other_properties['player_index_to_display'] in self.game_state.player_name:
+                            if w.title!=self.game_state.player_name[w.other_properties['player_index_to_display']]:
+                                w.title = self.game_state.player_name[w.other_properties['player_index_to_display']]
+                    elif 'score_to_display' in w.other_properties:
+                        scores = calculate_score(w.to_valuelist(), w.other_properties['score_to_display'])
+                        if w.title!=str(scores):
+                            if w.title.isdigit() or scores>0:
+                                w.title=str(scores)
 
 
     def on_draw(self):
