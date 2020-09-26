@@ -1,7 +1,10 @@
 """ card piles"""
+import arcade
 from clientelements import Card, GameFlatButton,GameTextLabel
 from utils import *
-
+import gamestate
+from arcade.gui import UIEvent, TEXT_INPUT,UIInputBox
+import copy
 
 PILE_BUTTON_HEIGHT = 12
 PILE_BUTTON_FONTSIZE = 8
@@ -10,13 +13,13 @@ N_ELEMENT_PER_PILE = 4
 class PileMat(arcade.SpriteSolidColor):
     """ Mat for a card pile """
 
-    def __init__(self, cardpile, *args, **kwargs):
+    def __init__(self, card_pile, *args, **kwargs):
         """ Card constructor """
 
         # Attributes for suit and value
         super().__init__(*args, **kwargs)
         # Image to use for the sprite when face up
-        self._cardpile = cardpile
+        self._card_pile = card_pile
     @property
     def cardpile(self):
         return self._card_pile
@@ -25,10 +28,10 @@ class PileMat(arcade.SpriteSolidColor):
 class CardPile(arcade.SpriteList):
     """ Card sprite """
 
-    def __init__(self, card_pile_id, mat_center, mat_size, mat_boundary, card_scale, card_offset, mat_color=None, sorting_rule=None,
+    def __init__(self, card_pile_id, mat_center, mat_size, mat_boundary, card_scale, card_offset, mat_color, sorting_rule=None,
                  auto_sort_setting=None,
                  enable_sort_button=True, enable_clear_button=False, enable_recover_last_removed_cards=False,
-                 clear_action=None, recover_action=None,
+                 update_event_handle = None,
                  enable_title=False, title=None, other_properties=None, *args, **kwargs):
         """ Card constructor """
 
@@ -38,8 +41,10 @@ class CardPile(arcade.SpriteList):
         self.mat_size = mat_size
         self.card_start_x, self.card_start_y = mat_center[0] - mat_size[0] // 2 + mat_boundary[0], mat_center[1] + \
                                                mat_size[1] // 2 - mat_boundary[1]
-        self._pile_mat = PileMat(self, self.mat_size[0], self.mat_size[1],
-                                 arcade.csscolor.LIGHT_SLATE_GREY if mat_color is None else mat_color)
+        self._pile_mat = PileMat(self, int(self.mat_size[0]), int(self.mat_size[1]), mat_color)
+                                 #arcade.csscolor.LIGHT_SLATE_GREY if mat_color is None else mat_color)
+        self._pile_mat.position = mat_center
+
         self.card_max_x = mat_center[0] + mat_size[0] // 2 - mat_boundary[0]
         self.step_x, self.step_y = int(card_offset[0]), int(card_offset[1])
         self.card_scale = card_scale
@@ -51,14 +56,14 @@ class CardPile(arcade.SpriteList):
         self.sort_button = None
         self.enable_clear_button = enable_clear_button
         self.clear_button = None
-        self.clear_action = clear_action
+        #self.clear_action = clear_action
         self.enable_recover_last_removed_cards = enable_recover_last_removed_cards
         self.recover_button = None
-        self.recover_action = recover_action
+        #self.recover_action = recover_action
         self._title_label = None
         self.enable_title = enable_title
         self._title = '' if title is None else title
-
+        self._update_event_handle = update_event_handle if update_event_handle is not None else lambda x: None
         self._last_removed_card_values = []
         self._last_removed_face_status = {}
         self.other_properties = copy.deepcopy(other_properties)
@@ -75,7 +80,23 @@ class CardPile(arcade.SpriteList):
         while self.__len__() > 0:
             self.pop()
 
-    def recover_removed_card(self):
+    def _clear_card(self):
+
+        #if 'Clearable' in pile.other_properties:
+        #    if pile.other_properties['Clearable']:
+        new_event = gamestate.Event(
+            type='Remove',
+            src_pile = self.card_pile_id,
+            cards = self.to_valuelist()
+        )
+        self.clear()
+        #pile.clear()  # remove_card(dropped_card)
+        self._update_event_handle(new_event)
+
+        # self.event_buffer.append(new_event)
+        # self.game_state.update_from_event(new_event)
+
+    def _recover_removed_card(self):
         """ recover previously cleared cards"""
         card_recovered = self._last_removed_card_values
         face_status = self._last_removed_face_status
@@ -84,7 +105,27 @@ class CardPile(arcade.SpriteList):
 
         self._last_removed_card_values = []
         self._last_removed_face_status = {}
-        return card_recovered, face_status
+        #return card_recovered, face_status
+        new_event = gamestate.Event(
+            type='Add',
+            dst_pile = self.card_pile_id,
+            cards = card_recovered,
+            cards_status = face_status
+        )
+        self._update_event_handle(new_event)
+
+    # def recover_removed_card(self):
+    #
+    #     card_values, face_dict = self._recover_removed_card()
+    #
+    #     new_event = gamestate.Event(
+    #         type='Add',
+    #         dst_pile = pile.card_pile_id,
+    #         cards = card_values,
+    #         cards_status = face_dict
+    #     )
+    #     self._update_event_handle(new_event)
+
 
     @property
     def mat(self):
@@ -132,22 +173,22 @@ class CardPile(arcade.SpriteList):
         if self.enable_clear_button:
 
             if self.clear_button is None:
-                if self.clear_action is not None:
-                    self.clear_button = GameFlatButton(
-                        self.clear_action,
-                        font_size=PILE_BUTTON_FONTSIZE,
-                        text='CLEAR',
-                        center_x=self.mat_center[0] - self.mat_size[0] // 2 + int(
-                            self.mat_size[0] / N_ELEMENT_PER_PILE / 2 * 5),
-                        center_y=self.mat_center[1] + self.mat_size[1] // 2 + PILE_BUTTON_HEIGHT // 2,
-                        width=int(self.mat_size[0] / N_ELEMENT_PER_PILE),
-                        height=PILE_BUTTON_HEIGHT
-                    )
+
+                self.clear_button = GameFlatButton(
+                    self._clear_card,
+                    font_size=PILE_BUTTON_FONTSIZE,
+                    text='CLEAR',
+                    center_x=self.mat_center[0] - self.mat_size[0] // 2 + int(
+                        self.mat_size[0] / N_ELEMENT_PER_PILE / 2 * 5),
+                    center_y=self.mat_center[1] + self.mat_size[1] // 2 + PILE_BUTTON_HEIGHT // 2,
+                    width=int(self.mat_size[0] / N_ELEMENT_PER_PILE),
+                    height=PILE_BUTTON_HEIGHT
+                )
             all_elements.append(self.clear_button)
         if self.enable_recover_last_removed_cards:
             if self.recover_button is None:
                 self.recover_button = GameFlatButton(
-                    self.recover_action,
+                    self._recover_removed_card,
                     font_size=PILE_BUTTON_FONTSIZE,
                     text='UNDO CLEAR',
                     center_x=self.mat_center[0] - self.mat_size[0] // 2 + int(
@@ -185,6 +226,8 @@ class CardPile(arcade.SpriteList):
     def to_face_staus(self):
         """ export as dictionary"""
         return {w.value: w.face for w in self}
+
+
 
     def remove_card(self, card):
         self.remove(card)

@@ -27,16 +27,16 @@ def get_minimum_distance_mat(card, mat_list):
     return mat_list[min_index], min_dist
 
 
-class Mat(arcade.SpriteSolidColor):
-    """ Mat for a card pile """
-
-    def __init__(self, pile_position_in_card_pile_list, *args, **kwargs):
-        """ Card constructor """
-
-        # Attributes for suit and value
-        super().__init__(*args, **kwargs)
-        # Image to use for the sprite when face up
-        self.pile_position_in_card_pile_list = pile_position_in_card_pile_list
+# class Mat(arcade.SpriteSolidColor):
+#     """ Mat for a card pile """
+#
+#     def __init__(self, pile_position_in_card_pile_list, *args, **kwargs):
+#         """ Card constructor """
+#
+#         # Attributes for suit and value
+#         super().__init__(*args, **kwargs)
+#         # Image to use for the sprite when face up
+#         self.pile_position_in_card_pile_list = pile_position_in_card_pile_list
 
 # Face down image
 FACE_DOWN_IMAGE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resources/images/cards/cardBack_red2.png")

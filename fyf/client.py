@@ -11,20 +11,18 @@ import random
 import arcade
 import os
 import argparse
-import gamestate, clientutil
+import utils
+import gamestate, clientelements
+from cardpile import CardPile
+from clientelements import Card, GameFlatButton,GameTextLabel
+from utils import *
 from arcade import gui
-from arcade.gui import UIEvent, TEXT_INPUT,UIInputBox
-import copy
+
 from dataclasses import asdict
 import uuid
 
 parser = argparse.ArgumentParser(description='Card client')
 
-#parser.add_argument('playerindex', type=int,
-#                    help='player index')
-
-#parser.add_argument('-p', dest='player_name', type=str, help='your name to be displayed', default='')
-#parser.add_argument('-n', dest='n_player', type=int, help='number of player', default=6)
 parser.add_argument('-u', dest='server_ip', type=str, help='server ip', default='162.243.211.250')
 # Network
 UPDATE_TICK = 30
@@ -94,23 +92,15 @@ def calculate_score_pile_positions(player_index, n_player, self_player_index=Non
     mat_position_index = (player_index - self_player_index) % n_player
     if mat_position_index < math.ceil(n_player / 2):
         mat_x = STARTING_X + MAT_WIDTH * NORMAL_MAT_SCALE * ((1+HORIZONTAL_MARGIN_PERCENT)  * mat_position_index + 0.5)
-        mat_y = BOTTOM_SCORE_ROW_Y #- MAT_HEIGHT * NORMAL_MAT_SCALE
+        mat_y = BOTTOM_SCORE_ROW_Y
     else:
         mat_x = STARTING_X + MAT_WIDTH * NORMAL_MAT_SCALE * ((1+HORIZONTAL_MARGIN_PERCENT)  * (n_player-1-mat_position_index) + 0.5)
-        mat_y = TOP_SCORE_ROW_Y #+ MAT_HEIGHT * NORMAL_MAT_SCALE
+        mat_y = TOP_SCORE_ROW_Y
     return mat_x, mat_y
 
 
 
 
-SCORE_RULE_510K = 0
-SCORE_RULE_COUNT = 1
-def calculate_score(value_list, score_rule):
-    if score_rule == SCORE_RULE_510K:
-        score_list = [(w % 54) % 13 for w in value_list]
-        return score_list.count(3)*5 + score_list.count(8)*10 + score_list.count(11) *10
-    elif score_rule == SCORE_RULE_COUNT:
-        return len(value_list)
 
 
 
@@ -135,8 +125,6 @@ class CardGame(arcade.Window):
         """ update game state from gs_dict """
         # no GUI change is allowed in this function
         self.game_state = gamestate.GameState(**gs_dict)
-
-
 
 
 class ConnectView(arcade.View):
@@ -280,8 +268,6 @@ class GameView(arcade.View):
             self.player_id = str(uuid.uuid4())
         else:
             self.player_id = player_id
-        #self.player_name = player_name
-        #self.player_name_display_list = None
         self.n_player = None
         self.self_player_index = None
         self.n_decks = None
@@ -348,154 +334,164 @@ class GameView(arcade.View):
 
         #self.hand_pile_index = len(self.card_pile_list)
         if self.self_player_index >=0:
-            hand_pile_mat = Mat(len(self.card_pile_list), int(HAND_MAT_WIDTH*CARD_SCALE), int(HAND_MAT_HEIGHT*CARD_SCALE),
-                                       arcade.csscolor.LIGHT_SLATE_GREY)
-            self.card_pile_list.append(CardPile(
+            #hand_pile_mat = Mat(len(self.card_pile_list), int(HAND_MAT_WIDTH*CARD_SCALE), int(HAND_MAT_HEIGHT*CARD_SCALE),
+            #                           arcade.csscolor.LIGHT_SLATE_GREY)
+            card_pile = CardPile(
                 card_pile_id=self.self_player_index,
                 mat_center=(HAND_MAT_X, HAND_MAT_Y),
                 mat_size = (HAND_MAT_WIDTH*CARD_SCALE, HAND_MAT_HEIGHT*CARD_SCALE),
                 mat_boundary=(int(CARD_WIDTH*CARD_SCALE/2), int(CARD_HEIGHT*CARD_SCALE/2)),
                 card_scale = CARD_SCALE,
                 card_offset = (int(CARD_WIDTH*CARD_SCALE*CARD_OFFSET_PCT),int(CARD_HEIGHT*CARD_SCALE)),
+                mat_color=arcade.csscolor.LIGHT_SLATE_GREY,
                 sorting_rule=SORT_BY_SUIT_THEN_NUMBER,
                 auto_sort_setting=AUTO_SORT_ALL_CARDS,
                 enable_sort_button=True,
                 enable_clear_button=False,
                 enable_recover_last_removed_cards=False,
+                update_event_handle=self.add_event,
                 enable_title=True,
                 title='Your Private Pile',
                 other_properties={'Clearable': False, 'score_to_display': SCORE_RULE_COUNT}
-            ))
-            hand_pile_mat.position = HAND_MAT_X, HAND_MAT_Y
-            self.pile_mat_list.append(hand_pile_mat)
+            )
+            self.card_pile_list.append(card_pile)
+            #hand_pile_mat.position = HAND_MAT_X, HAND_MAT_Y
+            self.pile_mat_list.append(card_pile.mat)
 
-            temp_pile_mat = Mat(len(self.card_pile_list), int(MAT_WIDTH*NORMAL_MAT_SCALE), int(HAND_MAT_HEIGHT*CARD_SCALE),
-                                       arcade.csscolor.LIGHT_SLATE_GREY)
-            self.card_pile_list.append(CardPile(
+            #temp_pile_mat = Mat(len(self.card_pile_list), int(MAT_WIDTH*NORMAL_MAT_SCALE), int(HAND_MAT_HEIGHT*CARD_SCALE),
+            #                           arcade.csscolor.LIGHT_SLATE_GREY)
+            card_pile = CardPile(
                 card_pile_id=self.self_player_index + self.n_player,
-                mat_center=(int(HAND_MAT_X + HAND_MAT_WIDTH*CARD_SCALE/2 + MAT_WIDTH*NORMAL_MAT_SCALE*0.6), HAND_MAT_Y),
-                mat_size =  (int(MAT_WIDTH*NORMAL_MAT_SCALE), HAND_MAT_HEIGHT*CARD_SCALE),
-                mat_boundary = (int(CARD_WIDTH*NORMAL_MAT_SCALE/2), int(CARD_HEIGHT*CARD_SCALE/2)),
+                mat_center=(
+                int(HAND_MAT_X + HAND_MAT_WIDTH * CARD_SCALE / 2 + MAT_WIDTH * NORMAL_MAT_SCALE * 0.6), HAND_MAT_Y),
+                mat_size=(int(MAT_WIDTH * NORMAL_MAT_SCALE), HAND_MAT_HEIGHT * CARD_SCALE),
+                mat_boundary=(int(CARD_WIDTH * NORMAL_MAT_SCALE / 2), int(CARD_HEIGHT * CARD_SCALE / 2)),
                 card_scale=CARD_SCALE,
-                card_offset=(int(CARD_WIDTH*CARD_SCALE*CARD_OFFSET_PCT),int(CARD_HEIGHT*CARD_SCALE)),
+                card_offset=(int(CARD_WIDTH * CARD_SCALE * CARD_OFFSET_PCT), int(CARD_HEIGHT * CARD_SCALE)),
+                mat_color=arcade.csscolor.LIGHT_SLATE_GREY,
                 sorting_rule=SORT_BY_SUIT_THEN_NUMBER,
                 auto_sort_setting=NO_AUTO_SORT,
                 enable_sort_button=True,
                 enable_clear_button=False,
                 enable_recover_last_removed_cards=False,
+                update_event_handle=self.add_event,
                 enable_title=True,
                 title='Private Pile 2',
                 other_properties={'Clearable': False, 'score_to_display': SCORE_RULE_COUNT}
-            ))
-            temp_pile_mat.position = int(HAND_MAT_X + HAND_MAT_WIDTH*CARD_SCALE/2 + MAT_WIDTH*NORMAL_MAT_SCALE*0.6), HAND_MAT_Y
-            self.pile_mat_list.append(temp_pile_mat)
+            )
+            self.card_pile_list.append(card_pile)
+            #temp_pile_mat.position = int(HAND_MAT_X + HAND_MAT_WIDTH*CARD_SCALE/2 + MAT_WIDTH*NORMAL_MAT_SCALE*0.6), HAND_MAT_Y
+            self.pile_mat_list.append(card_pile.mat)
 
         # main output piles for each player
         starting_index_output_pile = 2* self.n_player
         for player_index in range(self.n_player):
             pile_ls_index = len(self.card_pile_list)
             pile_position = calculate_main_pile_positions(player_index, self.n_player, self.self_player_index)
-            pile = Mat(pile_ls_index, int(MAT_WIDTH*NORMAL_MAT_SCALE), int(MAT_HEIGHT*NORMAL_MAT_SCALE),
-                                           arcade.csscolor.FOREST_GREEN if player_index==self.self_player_index else arcade.csscolor.DARK_OLIVE_GREEN)
-            pile.position = pile_position
-            self.pile_mat_list.append(pile)
-
-            self.card_pile_list.append(
-                CardPile(
-                    card_pile_id=player_index+starting_index_output_pile,
-                    mat_center = (pile_position[0], pile_position[1]),
-                    mat_size = (int(MAT_WIDTH*NORMAL_MAT_SCALE), int(MAT_HEIGHT*NORMAL_MAT_SCALE)),
-                    mat_boundary = (int(CARD_WIDTH*NORMAL_MAT_SCALE/2), int(CARD_HEIGHT*NORMAL_MAT_SCALE/2)),
-                    card_scale = NORMAL_MAT_SCALE,
-                    card_offset = (int(CARD_WIDTH*NORMAL_MAT_SCALE*CARD_OFFSET_PCT),int(CARD_HEIGHT*NORMAL_MAT_SCALE*CARD_OFFSET_PCT)),
-                    sorting_rule= SORT_BY_SUIT_THEN_NUMBER,
-                    auto_sort_setting = AUTO_SORT_NEW_CARD_ONLY,
-                    enable_sort_button=True,
-                    enable_clear_button=True,
-                    clear_action=lambda: self.clear_a_pile(pile_index=pile_ls_index),
-                    enable_recover_last_removed_cards=True,
-                    recover_action=lambda: self.recover_card_to_a_pile(pile_index=pile_ls_index),
-                    enable_title=True,
-                    other_properties = {'Clearable':True, 'player_index_to_display': player_index}
-                )
+            #pile = Mat(pile_ls_index, int(MAT_WIDTH*NORMAL_MAT_SCALE), int(MAT_HEIGHT*NORMAL_MAT_SCALE),
+            #                               arcade.csscolor.FOREST_GREEN if player_index==self.self_player_index else arcade.csscolor.DARK_OLIVE_GREEN)
+            #pile.position = pile_position
+            card_pile = CardPile(
+                card_pile_id=player_index + starting_index_output_pile,
+                mat_center=(pile_position[0], pile_position[1]),
+                mat_size=(int(MAT_WIDTH * NORMAL_MAT_SCALE), int(MAT_HEIGHT * NORMAL_MAT_SCALE)),
+                mat_boundary=(int(CARD_WIDTH * NORMAL_MAT_SCALE / 2), int(CARD_HEIGHT * NORMAL_MAT_SCALE / 2)),
+                card_scale=NORMAL_MAT_SCALE,
+                card_offset=(int(CARD_WIDTH * NORMAL_MAT_SCALE * CARD_OFFSET_PCT),
+                             int(CARD_HEIGHT * NORMAL_MAT_SCALE * CARD_OFFSET_PCT)),
+                mat_color=arcade.csscolor.FOREST_GREEN if player_index==self.self_player_index else arcade.csscolor.DARK_OLIVE_GREEN,
+                sorting_rule=SORT_BY_SUIT_THEN_NUMBER,
+                auto_sort_setting=AUTO_SORT_NEW_CARD_ONLY,
+                enable_sort_button=True,
+                enable_clear_button=True,
+                enable_recover_last_removed_cards=True,
+                update_event_handle=self.add_event,
+                enable_title=True,
+                other_properties={'Clearable': True, 'player_index_to_display': player_index}
             )
+            self.card_pile_list.append(card_pile)
+            self.pile_mat_list.append(card_pile.mat)
+
+
 
         # score piles for each player
         starting_index_score_pile = self.n_player*3
         for player_index in range(self.n_player):
 
             pile_position = calculate_score_pile_positions(player_index, self.n_player, self.self_player_index)
-            pile = Mat(len(self.card_pile_list), int(MAT_WIDTH*0.5), int(MAT_HEIGHT*0.3),
-                                           arcade.csscolor.DARK_SLATE_GRAY)
-            pile.position = pile_position
-            self.pile_mat_list.append(pile)
-            self.card_pile_list.append(
-                CardPile(
-                    card_pile_id=player_index + starting_index_score_pile,
-                    mat_center=(pile_position[0], pile_position[1]),
-                    mat_size=(int(MAT_WIDTH * 0.5), int(MAT_HEIGHT * SCORE_MAT_SCALE)),
-                    mat_boundary=(int(CARD_WIDTH * SCORE_MAT_SCALE/2), int(CARD_HEIGHT * SCORE_MAT_SCALE/2)),
-                    card_scale =SCORE_MAT_SCALE,
-                    card_offset=(int(CARD_WIDTH * SCORE_MAT_SCALE * CARD_OFFSET_PCT),
-                                 int(CARD_HEIGHT * SCORE_MAT_SCALE * CARD_OFFSET_PCT)),
-                    sorting_rule=SORT_BY_NUMBER_THEN_SUIT,
-                    auto_sort_setting=NO_AUTO_SORT,
-                    enable_sort_button=True,
-                    enable_clear_button=False,
-                    enable_recover_last_removed_cards=False,
-                    enable_title=True,
-                    title='Cards won',
-                    other_properties={'Clearable':False, 'score_to_display':SCORE_RULE_510K}
-                )
-            )
-
-        pile = Mat(len(self.card_pile_list), int(MAT_WIDTH*0.5), int(MAT_HEIGHT*0.3), arcade.csscolor.DARK_SLATE_BLUE)
-        pile.position = int(MAT_WIDTH * 0.35), MID_CARD_Y
-        self.pile_mat_list.append(pile)
-        self.card_pile_list.append(
-            CardPile(
-                card_pile_id=self.n_player*4,
-                mat_center=pile.position,
+            #pile = Mat(len(self.card_pile_list), int(MAT_WIDTH*0.5), int(MAT_HEIGHT*0.3),
+            #                               arcade.csscolor.DARK_SLATE_GRAY)
+            #pile.position = pile_position
+            card_pile = CardPile(
+                card_pile_id=player_index + starting_index_score_pile,
+                mat_center=(pile_position[0], pile_position[1]),
                 mat_size=(int(MAT_WIDTH * 0.5), int(MAT_HEIGHT * SCORE_MAT_SCALE)),
-                mat_boundary=(int(CARD_WIDTH * SCORE_MAT_SCALE/2), int(CARD_HEIGHT * SCORE_MAT_SCALE/2)),
-                card_scale =SCORE_MAT_SCALE,
+                mat_boundary=(int(CARD_WIDTH * SCORE_MAT_SCALE / 2), int(CARD_HEIGHT * SCORE_MAT_SCALE / 2)),
+                card_scale=SCORE_MAT_SCALE,
                 card_offset=(int(CARD_WIDTH * SCORE_MAT_SCALE * CARD_OFFSET_PCT),
                              int(CARD_HEIGHT * SCORE_MAT_SCALE * CARD_OFFSET_PCT)),
-                sorting_rule=DO_NOT_SORT,
-                auto_sort_setting=NO_AUTO_SORT,
-                enable_sort_button=False,
-                enable_clear_button=False,
-                enable_recover_last_removed_cards=False,
-                enable_title=True,
-                title='Hidden Pile',
-                other_properties={'Clearable': False, 'score_to_display': SCORE_RULE_COUNT}
-            )
-        )
-
-        # PUBLIC POLE
-        pile = Mat(len(self.card_pile_list),
-                     MAT_WIDTH, int(MAT_HEIGHT*0.3), arcade.csscolor.DARK_SLATE_GRAY)
-        pile.position = int(MAT_WIDTH * 1.2), MID_CARD_Y
-        self.pile_mat_list.append(pile)
-        self.card_pile_list.append(
-            CardPile(
-                card_pile_id=self.n_player*4+1,
-                mat_center=pile.position,
-                mat_size=(int(MAT_WIDTH), int(MAT_HEIGHT * SCORE_MAT_SCALE)),
-                mat_boundary=(int(CARD_WIDTH * SCORE_MAT_SCALE/2), int(CARD_HEIGHT * SCORE_MAT_SCALE/2)),
-                card_scale =SCORE_MAT_SCALE,
-                card_offset=(int(CARD_WIDTH * SCORE_MAT_SCALE * CARD_OFFSET_PCT),
-                             int(CARD_HEIGHT * SCORE_MAT_SCALE * CARD_OFFSET_PCT)),
+                mat_color=arcade.csscolor.DARK_SLATE_GRAY,
                 sorting_rule=SORT_BY_NUMBER_THEN_SUIT,
                 auto_sort_setting=NO_AUTO_SORT,
                 enable_sort_button=True,
                 enable_clear_button=False,
                 enable_recover_last_removed_cards=False,
+                update_event_handle=self.add_event,
                 enable_title=True,
-                title='Aggregate Cards Won',
-                other_properties={'Clearable': False, 'score_to_display':SCORE_RULE_510K}
+                title='Cards won',
+                other_properties={'Clearable': False, 'score_to_display': SCORE_RULE_510K}
             )
+
+            self.card_pile_list.append(card_pile)
+            self.pile_mat_list.append(card_pile.mat)
+
+
+        card_pile = CardPile(
+            card_pile_id=self.n_player * 4,
+            mat_center=(int(MAT_WIDTH * 0.35), MID_CARD_Y),
+            mat_size=(int(MAT_WIDTH * 0.5), int(MAT_HEIGHT * SCORE_MAT_SCALE)),
+            mat_boundary=(int(CARD_WIDTH * SCORE_MAT_SCALE / 2), int(CARD_HEIGHT * SCORE_MAT_SCALE / 2)),
+            card_scale=SCORE_MAT_SCALE,
+            card_offset=(int(CARD_WIDTH * SCORE_MAT_SCALE * CARD_OFFSET_PCT),
+                         int(CARD_HEIGHT * SCORE_MAT_SCALE * CARD_OFFSET_PCT)),
+            mat_color=arcade.csscolor.DARK_SLATE_BLUE,
+            sorting_rule=DO_NOT_SORT,
+            auto_sort_setting=NO_AUTO_SORT,
+            enable_sort_button=False,
+            enable_clear_button=False,
+            enable_recover_last_removed_cards=False,
+            update_event_handle=self.add_event,
+            enable_title=True,
+            title='Hidden Pile',
+            other_properties={'Clearable': False, 'score_to_display': SCORE_RULE_COUNT}
         )
+        self.card_pile_list.append(card_pile)
+        self.pile_mat_list.append(card_pile.mat)
+        # PUBLIC POLE
+        #pile = Mat(len(self.card_pile_list),
+                     #MAT_WIDTH, int(MAT_HEIGHT*0.3), )
+        #pile.position = int(MAT_WIDTH * 1.2), MID_CARD_Y
+        card_pile = CardPile(
+            card_pile_id=self.n_player * 4 + 1,
+            mat_center=(int(MAT_WIDTH * 1.2), MID_CARD_Y),
+            mat_size=(int(MAT_WIDTH), int(MAT_HEIGHT * SCORE_MAT_SCALE)),
+            mat_boundary=(int(CARD_WIDTH * SCORE_MAT_SCALE / 2), int(CARD_HEIGHT * SCORE_MAT_SCALE / 2)),
+            card_scale=SCORE_MAT_SCALE,
+            card_offset=(int(CARD_WIDTH * SCORE_MAT_SCALE * CARD_OFFSET_PCT),
+                         int(CARD_HEIGHT * SCORE_MAT_SCALE * CARD_OFFSET_PCT)),
+            mat_color = arcade.csscolor.DARK_SLATE_GRAY,
+            sorting_rule=SORT_BY_NUMBER_THEN_SUIT,
+            auto_sort_setting=NO_AUTO_SORT,
+            enable_sort_button=True,
+            enable_clear_button=False,
+            enable_recover_last_removed_cards=False,
+            update_event_handle = self.add_event,
+            enable_title=True,
+            title='Aggregate Cards Won',
+            other_properties={'Clearable': False, 'score_to_display': SCORE_RULE_510K}
+        )
+        self.card_pile_list.append(card_pile)
+        self.pile_mat_list.append(card_pile.mat)
 
         for card_pile in self.card_pile_list:
             new_ui_elments = card_pile.get_ui_elements()
@@ -524,7 +520,6 @@ class GameView(arcade.View):
                         height=30)
         self.ui_manager.add_ui_element(quit_game_button)
 
-
     def on_update(self, delta_time):
         """ on update, which is called in the event loop."""
         if self.game_state:
@@ -542,7 +537,7 @@ class GameView(arcade.View):
             active_cards_value = [w.value for w in self.active_cards]
             # update piles
             for w in self.card_pile_list:
-                if (w.card_pile_id) in self.game_state.cards_in_pile:
+                if w.card_pile_id in self.game_state.cards_in_pile:
                     # update card
                     card_changed_removed = w.from_value_face(self.game_state.cards_in_pile[w.card_pile_id], self.game_state.cards_status)
 
@@ -569,11 +564,10 @@ class GameView(arcade.View):
                             if w.title!=self.game_state.player_name[w.other_properties['player_index_to_display']]:
                                 w.title = self.game_state.player_name[w.other_properties['player_index_to_display']]
                     elif 'score_to_display' in w.other_properties:
-                        scores = calculate_score(w.to_valuelist(), w.other_properties['score_to_display'])
+                        scores = utils.calculate_score(w.to_valuelist(), w.other_properties['score_to_display'])
                         if w.title!=str(scores):
                             if w.title.isdigit() or scores>0:
                                 w.title=str(scores)
-
 
     def on_draw(self):
         """ Render the screen. """
@@ -581,49 +575,37 @@ class GameView(arcade.View):
 
         # Draw the mats the cards go on to
         self.pile_mat_list.draw()
-
-        # draw text
-        #for text, x, y, color, size in self.pile_text_list:
-        #    arcade.draw_text(text, x, y, color, size)
-        #if self.game_state:
-        #    for player_index, x, y, color, size in self.player_name_display_list:
-        #        if player_index in self.game_state.player_name:
-        #            arcade.draw_text(self.game_state.player_name[player_index], x, y, color, size)
-        # Draw the cards
         for card_pile in self.card_pile_list[::-1]:
             card_pile.draw()
 
-    def on_key_press(self, symbol: int, modifiers: int):
-         """ User presses key """
-         pass
-         # if symbol == arcade.key.R:
-         #     if modifiers & arcade.key.MOD_CTRL:
-         #        self.initiate_game_restart()
-         # if symbol == arcade.key.Q:
-         #     if modifiers & arcade.key.MOD_CTRL:
-         #        self.reset_player_and_game()
-    def get_pile_index_for_card(self, card):
-        """ What pile is this card in? """
+    #def get_pile_index_for_card(self, card):
+    #    """ What pile is this card in? """
 
+    #    for index, pile in enumerate(self.card_pile_list):
+    #        if card in pile:
+    #            return index
+
+    def get_pile_for_card(self, card):
         for index, pile in enumerate(self.card_pile_list):
             if card in pile:
-                return index
-
+                return pile
 
     def on_mouse_press(self, x, y, button, key_modifiers):
         """ Called when the user presses a mouse button. """
         self.card_on_press = None
         c_mats = arcade.get_sprites_at_point((x, y), self.pile_mat_list)
         if len(c_mats)>0:
-            pile_index = c_mats[0].pile_position_in_card_pile_list
+            #pile_index = c_mats[0].pile_position_in_card_pile_list
+            c_card_pile =  c_mats[0].cardpile
 
             if button == arcade.MOUSE_BUTTON_RIGHT and (key_modifiers & arcade.key.MOD_ALT):
                 # with control, sort current piles
-                self.card_pile_list[pile_index].resort_cards()
+                c_card_pile.resort_cards()
+                #self.card_pile_list[pile_index].resort_cards()
             elif button == arcade.MOUSE_BUTTON_RIGHT and (key_modifiers & arcade.key.MOD_CTRL):
-                self.clear_a_pile(pile_index)
+                self.clear_a_pile(c_card_pile)
             else:
-                cards = arcade.get_sprites_at_point((x, y), self.card_pile_list[pile_index])
+                cards = arcade.get_sprites_at_point((x, y), c_card_pile)
                 if len(cards) > 0:
 
                     primary_card = cards[-1]
@@ -634,10 +616,12 @@ class GameView(arcade.View):
 
                             if len(self.active_cards)>=1:
                                 # check if the pile being clicked on is the same as the active cards
-                                current_pile_index = self.get_pile_index_for_card(self.card_on_press)
-                                active_card_pile = self.get_pile_index_for_card(self.active_cards[0])
+                                #current_pile_index = self.get_pile_index_for_card(self.card_on_press)
+                                current_pile = self.get_pile_for_card(self.card_on_press)
+                                #active_card_pile = self.get_pile_index_for_card(self.active_cards[0])
+                                active_card_pile = self.get_pile_for_card(self.active_cards[0])
 
-                                if current_pile_index != active_card_pile:
+                                if current_pile != active_card_pile:
                                     # if the card being clicked on belongs to a different pile than those active cards. deactive other cards
                                     for card in self.active_cards:
                                         card.active = False
@@ -666,19 +650,19 @@ class GameView(arcade.View):
             return
 
         # Find the closest pile, in case we are in contact with more than one
-        new_pile, distance = clientutil.get_minimum_distance_mat(self.card_on_press, self.pile_mat_list)
+        mat_of_new_pile, distance = clientelements.get_minimum_distance_mat(self.card_on_press, self.pile_mat_list)
         reset_position = True
 
         # See if we are in contact with the closest pile
-        if arcade.check_for_collision(self.card_on_press, new_pile):
+        if arcade.check_for_collision(self.card_on_press, mat_of_new_pile):
 
             # What pile is it?
-            new_pile_index = new_pile.pile_position_in_card_pile_list#self.pile_mat_list.index(pile)
+            new_pile = mat_of_new_pile.cardpile#self.pile_mat_list.index(pile)
 
             #  Is it the same pile we came from?
-            old_pile_index = self.get_pile_index_for_card(self.card_on_press)
-            if new_pile_index == old_pile_index:
-                cards = arcade.get_sprites_at_point((x, y), self.card_pile_list[new_pile_index])
+            old_pile = self.get_pile_for_card(self.card_on_press)
+            if new_pile == old_pile:
+                cards = arcade.get_sprites_at_point((x, y), new_pile)
                 if len(cards) >= 1:
                     primary_card = cards[-1]
                     if primary_card is not None:
@@ -693,7 +677,7 @@ class GameView(arcade.View):
                                 self.active_cards.append(self.card_on_press)
                             self.card_on_press = None
             else:
-                self.move_cards(self.held_cards, new_pile_index)
+                self.move_cards(self.held_cards, new_pile)
                 for card in self.active_cards:
                     card.active = False
                 self.active_cards = []
@@ -717,59 +701,63 @@ class GameView(arcade.View):
             card.center_x += dx
             card.center_y += dy
 
-    def move_cards(self, cards, new_pile_index):
-        old_pile_index = self.get_pile_index_for_card(cards[0])
+    def move_cards(self, cards, new_pile):
+        old_pile = self.get_pile_for_card(cards[0])
 
         for i, dropped_card in enumerate(cards):
-            self.card_pile_list[new_pile_index].add_card(dropped_card)
-            self.card_pile_list[old_pile_index].remove_card(dropped_card)
-        new_event = gamestate.Event(type='Move',
-                                   player_index=self.self_player_index,
-                                   src_pile = self.card_pile_list[old_pile_index].card_pile_id,
-                                   dst_pile = self.card_pile_list[new_pile_index].card_pile_id,
-                                   cards = [card.value for card in cards]
-                                   )
+            new_pile.add_card(dropped_card)
+            old_pile.remove_card(dropped_card)
+        new_event = gamestate.Event(
+            type='Move',
+            player_index=self.self_player_index,
+            src_pile = old_pile.card_pile_id,
+            dst_pile = new_pile.card_pile_id,
+            cards = [card.value for card in cards]
+        )
         self.event_buffer.append(new_event)
         self.game_state.update_from_event(new_event)
 
     def flip_card(self, card):
         new_face=card.face_flipped()
 
-        new_event = gamestate.Event(type='Flip',
-                                   player_index=self.self_player_index,
-                                   cards = [card.value],
-                                   cards_status = {card.value:new_face}
-                                   )
+        new_event = gamestate.Event(
+            type='Flip',
+            player_index=self.self_player_index,
+            cards = [card.value],
+            cards_status = {card.value:new_face}
+        )
 
         self.event_buffer.append(new_event)
         self.game_state.update_from_event(new_event)
         card.face= new_face
 
-    def clear_a_pile(self, pile_index):
-        if 'Clearable' in self.card_pile_list[pile_index].other_properties:
-            if self.card_pile_list[pile_index].other_properties['Clearable']:
-                new_event = gamestate.Event(type='Remove',
-                                           player_index=self.self_player_index,
-                                           src_pile = self.card_pile_list[pile_index].card_pile_id,
-                                           cards = self.card_pile_list[pile_index].to_valuelist()
-                                           )
-                self.card_pile_list[pile_index].clear()  # remove_card(dropped_card)
-                self.event_buffer.append(new_event)
-                self.game_state.update_from_event(new_event)
+    # def clear_a_pile(self, pile):
+    #     if 'Clearable' in pile.other_properties:
+    #         if pile.other_properties['Clearable']:
+    #             new_event = gamestate.Event(
+    #                 type='Remove',
+    #                 player_index=self.self_player_index,
+    #                 src_pile = pile.card_pile_id,
+    #                 cards = pile.to_valuelist()
+    #             )
+    #             pile.clear()  # remove_card(dropped_card)
+    #             self.event_buffer.append(new_event)
+    #             self.game_state.update_from_event(new_event)
 
-    def recover_card_to_a_pile(self, pile_index):
-        card_values, face_dict = self.card_pile_list[pile_index].recover_removed_card()
+    # def recover_card_to_a_pile(self, pile):
+    #     card_values, face_dict = pile.recover_removed_card()
+    #
+    #     new_event = gamestate.Event(
+    #         type='Add',
+    #         dst_pile = pile.card_pile_id,
+    #         cards = card_values,
+    #         cards_status = face_dict
+    #     )
 
-        new_event = gamestate.Event(type='Add',
-                                   player_index=self.self_player_index,
-                                   dst_pile = self.card_pile_list[pile_index].card_pile_id,
-                                   cards = card_values,
-                                   cards_status = face_dict
-                                   )
+
+    def add_event(self, new_event):
         self.event_buffer.append(new_event)
         self.game_state.update_from_event(new_event)
-
-
 
     def reset_player_and_game(self):
         #print('reset')
