@@ -53,8 +53,9 @@ async def ticker(sock1, sock2):
     try:
         while True:
             if gs_buffer:
-
-                await sock1.send_string(gs_buffer.pop().to_json())
+                gs_state = gs_buffer.pop()
+                print(gs_state.to_json())
+                await sock1.send_string(gs_state.to_json())
             #print('.', end='', flush=True)
             await asyncio.sleep(1 / SERVER_UPDATE_TICK_HZ)
     except asyncio.CancelledError:

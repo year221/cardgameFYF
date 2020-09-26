@@ -18,7 +18,7 @@ class GameState:
     player_index_per_id: Dict[str, int] = field(default_factory=dict)
     player_name: Dict[str, str] = field(default_factory=dict)
     player_name_per_id: Dict[str, str] = field(default_factory=dict)
-    status: str = 'Initialization'
+    status: str = 'Wait for Player to Join'
 
     def to_json(self):
         d = asdict(self)
@@ -27,7 +27,9 @@ class GameState:
     def update_from_event(self, event):
         #print(event)
         #print(self.cards_in_pile.keys())
-        if event.type == 'Move':
+        if event.type == 'GetGameState':
+            return [copy.deepcopy(self)]
+        elif event.type == 'Move':
             if event.src_pile in self.cards_in_pile.keys() and event.dst_pile in self.cards_in_pile.keys():
 
                 if not (set(event.cards) - set(self.cards_in_pile[event.src_pile])):
@@ -106,16 +108,30 @@ class GameState:
                     assigned_index = min(set(range(len(self.player_name_per_id))) - set(self.player_index_per_id.values()))
                     self.player_index_per_id.update({event.player_id:assigned_index})
 
-                if sorted(self.player_index_per_id.keys()) == sorted(self.player_name_per_id.keys()) and (len(self.player_index_per_id) >=1):
+                if sorted(self.player_index_per_id.keys()) == sorted(self.player_name_per_id.keys()) and (any([w>=0 for key, w in self.player_index_per_id.items()])):
                     # all player recognized. Start game
-                    sorted_index = sorted(self.player_index_per_id.values())
-                    self.player_index_per_id = {key:sorted_index.index(val) for key, val in self.player_index_per_id.items()}
-                    self.player_name = {index_val: self.player_name_per_id[player_id] for player_id, index_val in self.player_index_per_id.items()}
-                    self.n_player = len(self.player_index_per_id)
-                    self.status = 'Start Game View'
+                    all_non_zero_ids = [w for key, w in self.player_index_per_id.items() if w>=0]
+                    sorted_index = sorted(all_non_zero_ids)
+                    self.player_index_per_id = {key:(sorted_index.index(val) if val>=0 else val) for key, val in self.player_index_per_id.items()}
+                    self.player_name = {index_val: self.player_name_per_id[player_id] for player_id, index_val in self.player_index_per_id.items() if index_val >0}
+                    self.n_player = len(all_non_zero_ids)
+                    self.status = 'Starting New Game'
                 return [copy.deepcopy(self)]
             else:
                 return []
+        elif event.type == 'Observe':
+            self.player_name_per_id.update({event.player_id: event.player_name})
+            self.player_index_per_id.update({event.player_id: -1})
+            if self.status == 'Wait for Player to Join':
+                if sorted(self.player_index_per_id.keys()) == sorted(self.player_name_per_id.keys()) and (any([w>=0 for key, w in self.player_index_per_id.items()])):
+                    # all player recognized. Start game
+                    all_non_zero_ids = [w for key, w in self.player_index_per_id.items() if w>=0]
+                    sorted_index = sorted(all_non_zero_ids)
+                    self.player_index_per_id = {key:(sorted_index.index(val) if val>=0 else val) for key, val in self.player_index_per_id.items()}
+                    self.player_name = {index_val: self.player_name_per_id[player_id] for player_id, index_val in self.player_index_per_id.items() if index_val >0}
+                    self.n_player = len(all_non_zero_ids)
+                    self.status = 'Starting New Game'
+            return [copy.deepcopy(self)]
 
 
 
@@ -133,9 +149,9 @@ class EventCardChange:
 @dataclass
 class EventGameControl:
     type: str
-    n_player : int = 6
+    n_player : int = 0
     n_card_per_pile : Dict[int, int] = field(default_factory=dict)
-    n_pile : int = 19
+    n_pile : int = 0
     face_down_pile : List[int] = field(default_factory=list)
     player_id: str = ''
 
