@@ -8,9 +8,8 @@ Card Game Find your friend
 - under directory, run `pip install -r requirements.txt` to install all dependencies
 - To run the game, go to fyf folder and run 
 ```
-python client.py [your player index]
+python client.py
 ```
-Default is 6 player game. To player other number players, run `python client.py [your player index] -n [number of player]`
 
 To get help information for the commandline, run `python client.py -h`
 
@@ -18,7 +17,7 @@ To get help information for the commandline, run `python client.py -h`
 We have prepared portable version in a zip file with WinPython packaged in. 
 - Download from the release all the zip files [https://github.com/year221/cardgameFYF/releases]
 - Unzip all files
-- Run the bat file based on your chosen player index.
+- Run the bat file 
 
 
 
