@@ -11,8 +11,7 @@ import random
 import arcade
 import os
 import argparse
-import gameutil, clientutil
-from clientutil import Mat, Card, GameFlatButton,GameTextLabel
+import gamestate, clientutil
 from arcade import gui
 from arcade.gui import UIEvent, TEXT_INPUT,UIInputBox
 import copy
@@ -101,42 +100,8 @@ def calculate_score_pile_positions(player_index, n_player, self_player_index=Non
         mat_y = TOP_SCORE_ROW_Y #+ MAT_HEIGHT * NORMAL_MAT_SCALE
     return mat_x, mat_y
 
-COM_TO_SERVER_UPDATE = 1
-COM_TO_SERVER_NOUPDATE = 0
-COM_FROM_SERVER_UPDATE = 1
-COM_FROM_SERVER_NOUPDATE = 0
 
-DO_NOT_SORT=0
-SORT_BY_SUIT_THEN_NUMBER=1
-SORT_BY_NUMBER_THEN_SUIT=2
-NO_AUTO_SORT = 0
-AUTO_SORT_NEW_CARD_ONLY = 1
-AUTO_SORT_ALL_CARDS = 2
 
-def sort_card_value(value_list, sorting_rule=None):
-    if sorting_rule is None:
-        return value_list
-    elif sorting_rule == DO_NOT_SORT:
-        return value_list
-    elif sorting_rule == SORT_BY_SUIT_THEN_NUMBER:
-        sorted_values = sorted([(w, w % 54) for w in value_list], key=lambda x: x[1])
-        return [w for w,_ in sorted_values]
-    elif sorting_rule == SORT_BY_NUMBER_THEN_SUIT:
-        sorted_values = sorted([(w, (((w % 54) % 13) * 5+ (w // 52) * 65 + (w % 54)//13)) for w in value_list], key=lambda x: x[1])
-        return [w for w, _ in sorted_values]
-
-def sort_cards(card_list, sorting_rule=None):
-    if sorting_rule is None:
-        return card_list
-    elif sorting_rule == DO_NOT_SORT:
-        return card_list
-    elif sorting_rule == SORT_BY_SUIT_THEN_NUMBER:
-        sorted_cards = sorted([(w, w.value % 54) for w in card_list], key=lambda x: x[1])
-        return [w for w,_ in sorted_cards]
-    elif sorting_rule == SORT_BY_NUMBER_THEN_SUIT:
-        sorted_cards = sorted([(w, (((w.value % 54) % 13) * 5+ (w.value // 52) * 65 + (w.value % 54)//13)) for w in card_list], key=lambda x: x[1])
-        return [w for w, _ in sorted_cards]
-    #return sorted_cards
 
 SCORE_RULE_510K = 0
 SCORE_RULE_COUNT = 1
@@ -149,222 +114,6 @@ def calculate_score(value_list, score_rule):
 
 
 
-PILE_BUTTON_HEIGHT=12
-PILE_BUTTON_FONTSIZE=8
-N_ELEMENT_PER_PILE=4
-class CardPile(arcade.SpriteList):
-    """ Card sprite """
-
-    def __init__(self, card_pile_id, mat_center, mat_size, mat_boundary, card_scale, card_offset, sorting_rule=None, auto_sort_setting=None,
-                 enable_sort_button=True, enable_clear_button=False, enable_recover_last_removed_cards=False, clear_action=None, recover_action=None,
-                 enable_title = False, title=None, other_properties=None, *args, **kwargs):
-        """ Card constructor """
-
-        super().__init__( *args, **kwargs)
-        self.card_pile_id=card_pile_id
-        self.mat_center = mat_center
-        self.mat_size = mat_size
-        self.card_start_x, self.card_start_y= mat_center[0] - mat_size[0]//2 + mat_boundary[0], mat_center[1] + mat_size[1]//2 - mat_boundary[1]
-        self.card_max_x = mat_center[0] + mat_size[0]//2 - mat_boundary[0]
-        self.step_x, self.step_y = int(card_offset[0]), int(card_offset[1])
-        self.card_scale = card_scale
-        self.sorting_rule= sorting_rule
-        self.auto_sort_setting = auto_sort_setting
-        self._cached_values = []
-        self._cached_face_status = {}
-        self.enable_sort_button = enable_sort_button
-        self.sort_button = None
-        self.enable_clear_button = enable_clear_button
-        self.clear_button = None
-        self.clear_action = clear_action
-        self.enable_recover_last_removed_cards = enable_recover_last_removed_cards
-        self.recover_button = None
-        self.recover_action = recover_action
-        self._title_label = None
-        self.enable_title = enable_title
-        self._title = '' if title is None else title
-
-        self._last_removed_card_values = []
-        self._last_removed_face_status = {}
-        self.other_properties = copy.deepcopy(other_properties)
-
-    def clear(self):
-        """ clear entire pile"""
-        self._last_removed_card_values = self._cached_values
-        self._last_removed_face_status = self._cached_face_status
-        self._cached_values = []
-        self._cached_face_status = {}
-        while self.__len__() > 0:
-            self.pop()
-
-
-    def recover_removed_card(self):
-        """ recover previously cleared cards"""
-        card_recovered= self._last_removed_card_values
-        face_status = self._last_removed_face_status
-        for value in card_recovered:
-            self.add_card(Card(value=value, face=self._last_removed_face_status[value]))
-
-        self._last_removed_card_values=[]
-        self._last_removed_face_status={}
-        return card_recovered, face_status
-
-    @property
-    def title(self):
-        return self._title
-    @title.setter
-    def title(self, x):
-        if x is None:
-            self._title = ''
-        else:
-            self._title = x
-        if self._title_label is not None:
-            self._title_label.text = self._title
-
-    def get_ui_elements(self):
-        all_elements = []
-        if self.enable_title:
-            if self._title_label is None:
-                self._title_label = GameTextLabel(
-                    text=self._title,
-                    font_size = PILE_BUTTON_FONTSIZE,
-                    center_x=self.mat_center[0] - self.mat_size[0] // 2 + int(self.mat_size[0] / N_ELEMENT_PER_PILE / 2),
-                    center_y=self.mat_center[1] + self.mat_size[1] // 2 + PILE_BUTTON_HEIGHT // 2,
-                )
-            all_elements.append(self._title_label)
-        if self.enable_sort_button:
-            if self.sort_button is None:
-                self.sort_button = GameFlatButton(
-                    self.resort_cards,
-                    font_size = PILE_BUTTON_FONTSIZE,
-                    text='SORT',
-                    center_x=self.mat_center[0]-self.mat_size[0]//2+int(self.mat_size[0]/N_ELEMENT_PER_PILE/2*3),
-                    center_y=self.mat_center[1]+self.mat_size[1]//2+PILE_BUTTON_HEIGHT//2,
-                    width=int(self.mat_size[0]/N_ELEMENT_PER_PILE),
-                    height=PILE_BUTTON_HEIGHT
-                )
-            all_elements.append(self.sort_button)
-        if self.enable_clear_button:
-
-            if self.clear_button is None:
-                if self.clear_action is not None:
-                    self.clear_button = GameFlatButton(
-                        self.clear_action,
-                        font_size=PILE_BUTTON_FONTSIZE,
-                        text='CLEAR',
-                        center_x=self.mat_center[0]-self.mat_size[0]//2+int(self.mat_size[0]/N_ELEMENT_PER_PILE/2*5),
-                        center_y=self.mat_center[1]+self.mat_size[1]//2+PILE_BUTTON_HEIGHT//2,
-                        width=int(self.mat_size[0]/N_ELEMENT_PER_PILE),
-                        height=PILE_BUTTON_HEIGHT
-                    )
-            all_elements.append(self.clear_button)
-        if self.enable_recover_last_removed_cards:
-            if self.recover_button is None:
-                self.recover_button = GameFlatButton(
-                    self.recover_action,
-                    font_size=PILE_BUTTON_FONTSIZE,
-                    text='UNDO CLEAR',
-                    center_x=self.mat_center[0]-self.mat_size[0]//2+int(self.mat_size[0]/N_ELEMENT_PER_PILE/2*7),
-                    center_y=self.mat_center[1]+self.mat_size[1]//2+PILE_BUTTON_HEIGHT//2,
-                    width=int(self.mat_size[0]/N_ELEMENT_PER_PILE),
-                    height=PILE_BUTTON_HEIGHT
-                )
-            all_elements.append(self.recover_button)
-        return all_elements
-
-    def add_card(self, card):
-        """ add card """
-        if self.__len__() > 0:
-            card_x, card_y = (self.__getitem__(-1)).position
-            card_x = card_x + self.step_x
-            if card_x >= self.card_max_x:
-                card_x = self.card_start_x
-                card_y = card_y - self.step_y
-        else:
-            card_x = self.card_start_x
-            card_y = self.card_start_y
-        card.position = card_x, card_y
-        card.scale=self.card_scale
-
-        self.append(card)
-
-
-        self._cached_values.append(card.value)
-        self._cached_face_status[card.value]=card.face
-
-    def to_valuelist(self):
-        """ export as value list"""
-        return [w.value for w in self]
-
-    def to_face_staus(self):
-        """ export as dictionary"""
-        return {w.value:w.face for w in self}
-
-
-
-    def remove_card(self, card):
-        self.remove(card)
-        self._cached_values.remove(card.value)
-        self._cached_face_status.pop(card.value)
-        #self._cached_codes.remove(card.code)
-
-
-    def resort_cards(self, sorting_rule=None):
-        """ sort cards based on certain order
-
-        :param sorting_rule:
-        :return: None
-        """
-        if sorting_rule is None:
-            sorting_rule = self.sorting_rule
-        sorted_cards = sort_cards(self, sorting_rule)#[(w, w.value % 54) for w in self], key=lambda x: x[1])
-        #if sorting_rule == SORT_BY_SUIT_THEN_NUMBER:
-        #    sorted_cards = sorted([(w, w.value % 54) for w in self], key = lambda x:x[1])
-        if self.to_valuelist() != [w.value for w in sorted_cards]:
-            self.clear()
-            for card in sorted_cards:
-                self.add_card(card)
-
-    def from_value_face(self, value_list, face_status_dict):
-        """ update pile based on value list and face status dictionary"""
-        # update pile based on new value list and face status dict
-        card_values_to_remove = set(self._cached_values) - set(value_list)
-        card_values_to_add = set(value_list) - set(self._cached_values)
-        card_values_to_flip = dict(set(self._cached_face_status.items())-set(face_status_dict.items()))
-
-        if card_values_to_remove or card_values_to_flip or card_values_to_add:
-            self._cached_values = value_list
-            self._cached_face_status = {key: value for key, value in face_status_dict.items() if key in self._cached_values}
-
-            if card_values_to_remove:
-                cards_to_remove_ls = [card for card in self if card.value in card_values_to_remove]
-                for card in cards_to_remove_ls:
-                    self.remove(card)
-
-            if card_values_to_flip:
-                cards_to_flip = [card for card in self if card.value in card_values_to_flip.keys()]
-                for card in cards_to_flip:
-                    card.face = face_status_dict[card.value]
-
-            if card_values_to_add:
-                #NO_AUTO_SORT = 0
-                #AUTO_SORT_NEW_CARD_ONLY = 1
-                #AUTO_SORT_ALL_CARDS = 2
-                if self.auto_sort_setting is None or self.auto_sort_setting == NO_AUTO_SORT:
-                    for value in card_values_to_add:
-                        self.add_card(Card(value=value, face=face_status_dict[value]))
-                elif self.auto_sort_setting == AUTO_SORT_NEW_CARD_ONLY:
-                    sorted_card_values = sort_card_value(card_values_to_add, self.sorting_rule)
-                    for value in sorted_card_values:
-                        self.add_card(Card(value=value, face=face_status_dict[value]))
-                else:
-                    for value in card_values_to_add:
-                        self.add_card(Card(value=value, face=face_status_dict[value]))
-
-        card_added_removed = set.union(card_values_to_remove, card_values_to_add)
-        if self.auto_sort_setting == AUTO_SORT_ALL_CARDS:
-            self.resort_cards()
-        return card_added_removed
 
 
 
@@ -385,7 +134,7 @@ class CardGame(arcade.Window):
     def update_game_state(self, gs_dict):
         """ update game state from gs_dict """
         # no GUI change is allowed in this function
-        self.game_state = gameutil.GameState(**gs_dict)
+        self.game_state = gamestate.GameState(**gs_dict)
 
 
 
@@ -411,29 +160,29 @@ class ConnectView(arcade.View):
         return self.window.event_buffer
     def connect(self, text):
         self.player_name = text
-        new_event = gameutil.EventConnect(type='UpdatePlayerInfo',
+        new_event = gamestate.EventConnect(type='UpdatePlayerInfo',
                                           player_name = self.player_name,
                                           player_id = self.player_id
                                           )
         self.event_buffer.append(new_event)
 
     def get_game_state(self):
-        new_event = gameutil.EventConnect(type='GetGameState')
+        new_event = gamestate.EventConnect(type='GetGameState')
         self.event_buffer.append(new_event)
 
     def send_ready(self, text):
-        new_event = gameutil.EventConnect(type='PlayerReady',
+        new_event = gamestate.EventConnect(type='PlayerReady',
                                           player_name = self.player_name,
                                           player_id = self.player_id
                                           )
         self.event_buffer.append(new_event)
 
     def reset_player_and_game(self):
-        new_event = gameutil.EventConnect(type='ResetPlayerAndGame')
+        new_event = gamestate.EventConnect(type='ResetPlayerAndGame')
         self.event_buffer.append(new_event)
 
     def observe_a_game(self):
-        new_event = gameutil.EventConnect(type='Observe',
+        new_event = gamestate.EventConnect(type='Observe',
                                           player_name = self.player_name,
                                           player_id = self.player_id
                                           )
@@ -968,22 +717,13 @@ class GameView(arcade.View):
             card.center_x += dx
             card.center_y += dy
 
-    ## supporting functions to send out events
-    # def connect(self):
-    #     new_event = gameutil.Event(type='Connect',
-    #                                player_index=self.self_player_index,
-    #                                player_name = self.player_name,
-    #                                player_id = self.player_id
-    #                                )
-    #     self.event_buffer.append(new_event)
-
     def move_cards(self, cards, new_pile_index):
         old_pile_index = self.get_pile_index_for_card(cards[0])
 
         for i, dropped_card in enumerate(cards):
             self.card_pile_list[new_pile_index].add_card(dropped_card)
             self.card_pile_list[old_pile_index].remove_card(dropped_card)
-        new_event = gameutil.Event(type='Move',
+        new_event = gamestate.Event(type='Move',
                                    player_index=self.self_player_index,
                                    src_pile = self.card_pile_list[old_pile_index].card_pile_id,
                                    dst_pile = self.card_pile_list[new_pile_index].card_pile_id,
@@ -995,7 +735,7 @@ class GameView(arcade.View):
     def flip_card(self, card):
         new_face=card.face_flipped()
 
-        new_event = gameutil.Event(type='Flip',
+        new_event = gamestate.Event(type='Flip',
                                    player_index=self.self_player_index,
                                    cards = [card.value],
                                    cards_status = {card.value:new_face}
@@ -1008,7 +748,7 @@ class GameView(arcade.View):
     def clear_a_pile(self, pile_index):
         if 'Clearable' in self.card_pile_list[pile_index].other_properties:
             if self.card_pile_list[pile_index].other_properties['Clearable']:
-                new_event = gameutil.Event(type='Remove',
+                new_event = gamestate.Event(type='Remove',
                                            player_index=self.self_player_index,
                                            src_pile = self.card_pile_list[pile_index].card_pile_id,
                                            cards = self.card_pile_list[pile_index].to_valuelist()
@@ -1020,7 +760,7 @@ class GameView(arcade.View):
     def recover_card_to_a_pile(self, pile_index):
         card_values, face_dict = self.card_pile_list[pile_index].recover_removed_card()
 
-        new_event = gameutil.Event(type='Add',
+        new_event = gamestate.Event(type='Add',
                                    player_index=self.self_player_index,
                                    dst_pile = self.card_pile_list[pile_index].card_pile_id,
                                    cards = card_values,
@@ -1033,7 +773,7 @@ class GameView(arcade.View):
 
     def reset_player_and_game(self):
         #print('reset')
-        new_event = gameutil.EventConnect(type='ResetPlayerAndGame')
+        new_event = gamestate.EventConnect(type='ResetPlayerAndGame')
         self.event_buffer.append(new_event)
 
 
@@ -1044,7 +784,7 @@ class GameView(arcade.View):
         n_residual_card = n_decks * 54 - n_card_per_player*self.n_player
         n_card_per_pile = {w: n_card_per_player for w in range(self.n_player)}
         n_card_per_pile[self.n_player*4]=n_residual_card
-        new_event = gameutil.Event(type='StartNewGame',
+        new_event = gamestate.Event(type='StartNewGame',
                                    player_index=self.self_player_index,
                                    n_player = self.n_player,
                                    n_pile = self.n_pile,
@@ -1077,7 +817,7 @@ def thread_receiver(window: CardGame, server_ip: str):
     sub_sock.subscribe('')
     try:
         while True:
-            gs_dict = sub_sock.recv_json(object_hook=gameutil.json_obj_hook)
+            gs_dict = sub_sock.recv_json(object_hook=gamestate.json_obj_hook)
             window.update_game_state(gs_dict)
             time.sleep(1 / UPDATE_TICK)
 

@@ -46,8 +46,9 @@ COLOR_INACTIVE = (255,255,255)
 # Card constants
 CARD_VALUES = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
 CARD_SUITS = ["Spades", "Hearts", "Clubs", "Diamonds", "Joker"]
+
 class Card(arcade.Sprite):
-    """ Card sprite """
+    """ Enhanced Card sprite boject"""
 
     def __init__(self, value=None, face=False, is_active=False, scale=1):
         """ Card constructor """
@@ -106,10 +107,6 @@ class Card(arcade.Sprite):
             self.color = COLOR_ACTIVE
         else:
             self.color = COLOR_INACTIVE
-
-    #def code_face_flipped(self):
-    #    return self.value, 'D' if self._is_face_up else 'U'
-
 
 class GameFlatButton(gui.UIFlatButton):
     """

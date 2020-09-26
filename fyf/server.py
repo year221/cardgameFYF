@@ -7,26 +7,25 @@ import json
 import zmq
 from zmq.asyncio import Context, Socket
 
-import gameutil
-#mport GameState, Event, json_obj_hook
+import gamestate
 #import traceback
 
 SERVER_UPDATE_TICK_HZ = 10
 
 
-async def update_from_client(gs: gameutil.GameState, gs_buffer: list, sock: Socket):
+async def update_from_client(gs: gamestate.GameState, gs_buffer: list, sock: Socket):
     try:
         while True:
 
 
-            msg = await sock.recv_json(object_hook=gameutil.json_obj_hook)
+            msg = await sock.recv_json(object_hook=gamestate.json_obj_hook)
             print(msg)
             counter = msg['counter']
             event_dict = msg['event']
             #print(event_dict)
             # update game sate
             #print({key: val for key, val in gs.cards_in_pile.items() if key != 0})
-            new_gs_ls = gs.update_from_event(gameutil.Event(**event_dict))
+            new_gs_ls = gs.update_from_event(gamestate.Event(**event_dict))
             if new_gs_ls:
                 gs_buffer += new_gs_ls
             #print('***')
@@ -44,7 +43,7 @@ async def ticker(sock1, sock2):
 
     # A task to receive keyboard and mouse inputs from players.
     # This will also update the game state, gs.
-    gs = gameutil.GameState(
+    gs = gamestate.GameState(
     )
     gs_buffer = []
     t = create_task(update_from_client(gs, gs_buffer, sock2))
