@@ -1,0 +1,128 @@
+name: Zhaopeng you
+min_player: 0
+max_player: -1
+default_screen_size: [1400, 800]
+normalizing_length: 800
+scale_by: height
+# for pixel tuples, the order is [X,Y]
+cardpiles:
+  - piletype: PublicPile
+    pile_set_tag: residual
+    display: ALL    
+    mat_center: [0.245, 0.625]    
+    mat_size: [0.35, 0.088875] 
+    mat_boundary: [0.02625, 0.035625]
+    card_size: [0.04375, 0.059375]
+    card_offset: [0.0109375, 0.01484375]
+    mat_color: [72, 61, 139]
+    sorting_rule: SORT_BY_SUIT_THEN_NUMBER
+    auto_sort_setting: NO_AUTO_SORT
+    enable_sort_button: True
+    enable_clear_button: False
+    enable_recover_last_removed_cards: False
+    title:
+      type: SCORE
+      default: Hidden Pile
+      score_type: CARD_COUNT
+      
+  - piletype: PlayerPile
+    pile_set_tag: hand
+    display: SELF    
+    mat_center: [0.669375, 0.14075]    
+    mat_size: [1.26875, 0.251875] 
+    mat_boundary: [0.04375, 0.059375]
+    card_size: [0.0875, 0.11875]
+    card_offset: [0.021875, 0.11875]
+    mat_color: [119, 136, 153]
+    sorting_rule: SORT_BY_SUIT_THEN_NUMBER
+    auto_sort_setting: AUTO_SORT_ALL_CARDS
+    enable_sort_button: True
+    enable_clear_button: False
+    enable_recover_last_removed_cards: False
+    title:
+      type: SCORE
+      default: Your Private Pile
+      score_type: CARD_COUNT  
+      
+  - piletype: PlayerPile
+    pile_set_tag: private
+    display: SELF    
+    mat_center: [1.51375, 0.14075]    
+    mat_size: [0.35, 0.251875] 
+    mat_boundary: [0.04375, 0.059375]
+    card_size: [0.0875, 0.11875]
+    card_offset: [0.021875, 0.11875]
+    mat_color: [119, 136, 153]
+    sorting_rule: SORT_BY_SUIT_THEN_NUMBER
+    auto_sort_setting: NO_AUTO_SORT
+    enable_sort_button: True
+    enable_clear_button: False
+    enable_recover_last_removed_cards: False
+    title:
+      type: SCORE
+      default: Private Pile 2
+      score_type: CARD_COUNT        
+  - piletype: PlayerPile
+    pile_set_tag: show
+    display: ALL_PLAYER_CIRCLE
+    pile_offset : [0.385, 0.5]
+    piles_per_side : [-1, 2]
+    pile_position_offset : 0
+    direction: COUNTERCLOCKWISE
+    pile_position_offset_type : OFFSET_BY_SELFPLAYERINDEX
+    starting_mat_center: [0.245, 0.375]    
+    mat_size: [0.35, 0.148125] 
+    mat_boundary: [0.04375, 0.059375]
+    card_size: [0.0875, 0.11875]
+    card_offset: [0.021875, 0.0296875]
+    mat_color: [85, 107, 47]
+    self_mat_color: [4, 139, 34]    
+    sorting_rule: SORT_BY_SUIT_THEN_NUMBER
+    auto_sort_setting: AUTO_SORT_NEW_CARD_ONLY
+    enable_sort_button: True
+    enable_clear_button: True
+    enable_recover_last_removed_cards: True
+    title:
+      type: PLAYER_NAME
+      default: '' 
+  - piletype: PlayerPile
+    pile_set_tag: score
+    display: ALL_PLAYER_CIRCLE
+    pile_offset : [0.385, 0.21625]
+    piles_per_side : [-1, 2]
+    pile_position_offset : 0
+    direction: COUNTERCLOCKWISE
+    pile_position_offset_type : OFFSET_BY_SELFPLAYERINDEX
+    starting_mat_center: [0.245, 0.51625]    
+    mat_size: [0.35, 0.088875] 
+    mat_boundary: [0.02625, 0.035625]
+    card_size: [0.04375, 0.059375]
+    card_offset: [0.0109375, 0.01484375]
+    mat_color: [47, 79, 79]    
+    sorting_rule: SORT_BY_NUMBER_THEN_SUIT
+    auto_sort_setting: NO_AUTO_SORT
+    enable_sort_button: True
+    enable_clear_button: False
+    enable_recover_last_removed_cards: False    
+    title:
+      type: SCORE
+      score_type: SCORE_510K
+      default: Cards won      
+  - piletype: PublicPile
+    pile_set_tag: shared_score
+    display: ALL
+    mat_center: [0.84, 0.625]    
+    mat_size: [0.7, 0.088875] 
+    mat_boundary: [0.02625, 0.035625]
+    card_size: [0.04375, 0.059375]
+    card_offset: [0.0109375, 0.01484375]
+    mat_color: [47, 79, 79]    
+    sorting_rule: SORT_BY_NUMBER_THEN_SUIT
+    auto_sort_setting: NO_AUTO_SORT
+    enable_sort_button: True
+    enable_clear_button: False
+    enable_recover_last_removed_cards: False    
+    title:
+      type: SCORE
+      score_type: SCORE_510K
+      default: Aggregated Cards won
