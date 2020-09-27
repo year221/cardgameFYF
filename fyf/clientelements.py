@@ -108,15 +108,21 @@ class Card(arcade.Sprite):
         else:
             self.color = COLOR_INACTIVE
 
+
+
+
+
 class GameFlatButton(gui.UIFlatButton):
     """
     To capture a button click, subclass the button and override on_click.
     """
     def __init__(self, click_event, font_size=None, bg_color=None, *arg, **kargs):
         super().__init__(*arg, **kargs)
-        self.click_event = click_event
+
         if font_size is not None:
             self.set_style_attrs(font_size=font_size)
+        if bg_color is not None:
+            self.set_style_attrs(bg_color=bg_color)
         self.set_style_attrs(border_color=arcade.color.BLACK,
                              font_color=arcade.color.GOLD,
                              #border_color_hover=arcade.color.BLUE,
@@ -125,6 +131,7 @@ class GameFlatButton(gui.UIFlatButton):
                              bg_color_hover=arcade.color.DARK_ORANGE,
                              bg_color_press=arcade.color.ORANGE,
                              )
+        self.click_event = click_event
 
     def on_click(self):
         """ Called when user lets off button """
