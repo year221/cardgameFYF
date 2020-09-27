@@ -127,6 +127,31 @@ class CardGame(arcade.Window):
         # no GUI change is allowed in this function
         self.game_state = gamestate.GameState(**gs_dict)
 
+class LoadingView(arcade.View):
+    """ Screen loading the GUI   """
+    def __init__(self, player_id=None):
+        super().__init__()
+        if player_id is None:
+            self.player_id = str(uuid.uuid4())
+        else:
+            self.player_id = player_id
+
+    @property
+    def game_state(self):
+        return self.window.game_state
+
+    def on_draw(self):
+        arcade.start_render()
+        arcade.draw_text('Loading. PLease Wait...', 10, 10, arcade.color.GOLD, 30)
+
+    def on_update(self, deltatime):
+        if self.game_state:
+            player_index = self.game_state.player_index_per_id[self.player_id]
+            n_player = self.game_state.n_player
+            game_view = GameView(player_id=self.player_id)
+            game_view.setup(game_config=DEFAULT_GAME_CONFIG, n_player=n_player, player_index=player_index)
+            self.window.show_view(game_view)
+
 class ConnectView(arcade.View):
     """ Screen waiting for people to connect   """
     def __init__(self, player_id=None, player_name=None):
@@ -179,25 +204,34 @@ class ConnectView(arcade.View):
         if self.game_state:
             if self.game_state.status=='Starting New Game':
                 if self.player_id in self.game_state.player_index_per_id:
-                    print(self.game_state.player_index_per_id)
                     player_index = self.game_state.player_index_per_id[self.player_id]
-                    player_name =  self.game_state.player_name_per_id[self.player_id]
-                    n_player = self.game_state.n_player
                     self.ui_manager.purge_ui_elements()
-                    game_view = GameView(player_id=self.player_id)
-                    game_view.setup(game_config =DEFAULT_GAME_CONFIG,  n_player=n_player, player_index=player_index)
-                    self.window.show_view(game_view)
+                    loading_view = LoadingView(player_id = self.player_id)
+                    self.window.show_view(loading_view)
+                    # #print(self.game_state.player_index_per_id)
+                    # player_index = self.game_state.player_index_per_id[self.player_id]
+                    # player_name =  self.game_state.player_name_per_id[self.player_id]
+                    # n_player = self.game_state.n_player
+                    # self.ui_manager.purge_ui_elements()
+                    # game_view = GameView(player_id=self.player_id)
+                    # game_view.setup(game_config =DEFAULT_GAME_CONFIG,  n_player=n_player, player_index=player_index)
+                    # self.window.show_view(game_view)
 
             elif self.game_state.status == 'In Game':
                 if self.player_id in self.game_state.player_index_per_id:
+                    #player_index = self.game_state.player_index_per_id[self.player_id]
+                    #player_name =  self.game_state.player_name_per_id[self.player_id]
                     player_index = self.game_state.player_index_per_id[self.player_id]
-                    player_name =  self.game_state.player_name_per_id[self.player_id]
-                    if player_index <=-1: # we are an observer
-                        n_player = self.game_state.n_player
+                    if player_index <= -1:
                         self.ui_manager.purge_ui_elements()
-                        game_view = GameView(player_id=self.player_id)
-                        game_view.setup(n_player=n_player, player_index=player_index)
-                        self.window.show_view(game_view)
+                        loading_view = LoadingView(player_id = self.player_id)
+                        self.window.show_view(loading_view)
+                    # if player_index <=-1: # we are an observer
+                    #     n_player = self.game_state.n_player
+                    #     self.ui_manager.purge_ui_elements()
+                    #     game_view = GameView(player_id=self.player_id)
+                    #     game_view.setup(n_player=n_player, player_index=player_index)
+                    #     self.window.show_view(game_view)
 
     def setup(self):
         self.ui_input_box = gui.UIInputBox(
