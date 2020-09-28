@@ -99,7 +99,8 @@ CARD_HEIGHT = 190
 class CardPile(arcade.SpriteList):
     """ Card sprite """
 
-    def __init__(self, card_pile_id, normalizing_length, mat_center, mat_size, mat_boundary, card_size, card_offset, mat_color, sorting_rule=None,
+    def __init__(self, card_pile_id, mat_center, mat_size, mat_boundary, card_size, card_offset, mat_color, size_scaler=1,
+                 sorting_rule=None,
                  auto_sort_setting=None,
                  enable_sort_button=True, enable_clear_button=False, enable_recover_last_removed_cards=False,
                  update_event_handle = None,
@@ -109,7 +110,7 @@ class CardPile(arcade.SpriteList):
 
         super().__init__(*args, **kwargs)
         self.card_pile_id = card_pile_id
-        self._normalizing_length = normalizing_length
+        self._size_scaler = size_scaler
 
         self._mat_center = mat_center
         self._mat_size = mat_size
@@ -119,24 +120,17 @@ class CardPile(arcade.SpriteList):
 
         self._card_offset = card_offset
         self._card_size = card_size
-        self.mat_center = int_scale_tuple(self._mat_center, normalizing_length)
-        self.mat_size = int_scale_tuple(self._mat_size, normalizing_length)
-        self.mat_boundary = int_scale_tuple(self._mat_boundary, normalizing_length)
-        self.card_start = int_scale_tuple(self._card_start, normalizing_length)
-        self.card_max_x =  self.mat_center[0] + self.mat_size[0] // 2 - self.mat_boundary[0]
-        self.step_x = round(self._card_offset[0] * normalizing_length)
-        self.step_y = round(self._card_offset[1] * normalizing_length)
-        self.card_scale = min(self._card_size[0]*normalizing_length/CARD_WIDTH, self._card_size[1]*normalizing_length/CARD_HEIGHT)
-        # @property
-        # def normalizing_length(self):
-        #     return self._normalizing_length
-        #
-        # @normalizing_length.setter
-        # def normalizing_length(self, x):
-        #     self._normalizing_length = x
-        #     self._card_scale_calculated = min(self._card_size[0] * self._normalizing_length / CARD_WIDTH,
-        #                                       self._card_size[1] * self._normalizing_length / CARD_HEIGHT)
+        self._card_scale = min(self._card_size[0]/CARD_WIDTH, self._card_size[1]/CARD_HEIGHT)
 
+        # update
+        self.mat_center = int_scale_tuple(self._mat_center, self._size_scaler)
+        self.mat_size = int_scale_tuple(self._mat_size, self._size_scaler)
+        self.mat_boundary = int_scale_tuple(self._mat_boundary, self._size_scaler)
+        self.card_start = int_scale_tuple(self._card_start, self._size_scaler)
+        self.card_max_x =  self.mat_center[0] + self.mat_size[0] // 2 - self.mat_boundary[0]
+        self.step_x = round(self._card_offset[0] * self._size_scaler)
+        self.step_y = round(self._card_offset[1] * self._size_scaler)
+        self.card_scale = self._card_scale*self._size_scaler
 
         self._pile_mat = PileMat(self, self.mat_size[0], self.mat_size[1], mat_color)
         self._pile_mat.position = self.mat_center
@@ -169,8 +163,23 @@ class CardPile(arcade.SpriteList):
         self._last_removed_face_status = {}
         self.other_properties = copy.deepcopy(other_properties)
 
-
-
+    @property
+    def size_scaler(self):
+        return self._size_scaler
+    @size_scaler.setter
+    def size_scaler(self, x):
+        self._size_scaler = x
+        self.mat_center = int_scale_tuple(self._mat_center, self._size_scaler)
+        self.mat_size = int_scale_tuple(self._mat_size, self._size_scaler)
+        self.mat_boundary = int_scale_tuple(self._mat_boundary, self._size_scaler)
+        self.card_start = int_scale_tuple(self._card_start, self._size_scaler)
+        self.card_max_x =  self.mat_center[0] + self.mat_size[0] // 2 - self.mat_boundary[0]
+        self.step_x = round(self._card_offset[0] * self._size_scaler)
+        self.step_y = round(self._card_offset[1] * self._size_scaler)
+        self.card_scale = self._card_scale*self._size_scaler
+        #self._pile_mat.position = self.mat_center
+        self._pile_mat.width = self.mat_size[0]
+        self._pile_mat.height = self.mat_size[1]
 
     def clear(self):
         """ clear entire pile"""

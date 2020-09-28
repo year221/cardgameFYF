@@ -109,9 +109,6 @@ class Card(arcade.Sprite):
             self.color = COLOR_INACTIVE
 
 
-
-
-
 class GameFlatButton(gui.UIFlatButton):
     """
     To capture a button click, subclass the button and override on_click.
@@ -137,6 +134,35 @@ class GameFlatButton(gui.UIFlatButton):
         """ Called when user lets off button """
         self.click_event()
 
+class ResizableGameFlatButton(GameFlatButton):
+    """
+    To capture a button click, subclass the button and override on_click.
+    """
+    def __init__(self, click_event, width, height, center_x, center_y, size_scaler=1, font_size=None, bg_color=None, *arg, **kargs):
+        self._width = width
+        self._height = height
+        self._center_x = center_x
+        self._center_y = center_y
+        self._size_scaler = size_scaler
+        super().__init__(click_event=click_event, font_size=font_size, bg_color=bg_color,
+                         width=round(self._width*self._size_scaler), height=round(self._height*self._size_scaler),
+                         center_x=round(self._center_x*self._size_scaler), center_y=round(self._center_y*self._size_scaler),
+                         *arg, **kargs)
+
+    @property
+    def size_scaler(self):
+        return self._size_scaler
+    @size_scaler.setter
+    def size_scaler(self, x):
+        self._size_scaler = x
+        self.width = round(self._width*self._size_scaler)
+        self.height = round(self._height * self._size_scaler)
+        self.center_x = round(self._center_x * self._size_scaler)
+        self.center_y = round(self._center_y * self._size_scaler)
+
+    def on_click(self):
+        """ Called when user lets off button """
+        self.click_event()
 
 
 class GameTextLabel(gui.UILabel):
