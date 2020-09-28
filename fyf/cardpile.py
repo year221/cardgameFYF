@@ -91,13 +91,12 @@ class PileMat(arcade.SpriteSolidColor):
         return self._card_pile
 
 
-    def update_size(self):
-        image = PIL.Image.new('RGBA', (width, height), color)
-        self.texture = Texture(f"Solid-{color[0]}-{color[1]}-{color[2]}", image)
-        self._points = self.texture.hit_box_points
+    # def update_size(self):
+    #     image = PIL.Image.new('RGBA', (width, height), color)
+    #     self.texture = Texture(f"Solid-{color[0]}-{color[1]}-{color[2]}", image)
+    #     self._points = self.texture.hit_box_points
 
 
-import cProfile
 
 CARD_WIDTH = 140
 CARD_HEIGHT = 190
