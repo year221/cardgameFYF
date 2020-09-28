@@ -281,16 +281,17 @@ class GameView(arcade.View):
         return self.window.event_buffer
 
     def on_resize(self, width, height):
-        print(f'resizing: {width} {height}')
+
         # calculate new scaling factor
         if self.game_config is not None:
-            previous_scaler = self._size_scaler
-            self.update_size_scaler(width, height)
-            if previous_scaler!=self._size_scaler:
-                for resizable_obj in self.resize_list:
-                    resizable_obj.size_scaler = self._size_scaler
+            new_size_scaler = self.calculate_size_scaler(width, height)
+            if new_size_scaler is not None:
+                if new_size_scaler !=self._size_scaler:
+                    self._size_scaler = new_size_scaler
+                    for resizable_obj in self.resize_list:
+                        resizable_obj.size_scaler = self._size_scaler
 
-    def update_size_scaler(self, width, height):
+    def calculate_size_scaler(self, width, height):
         """ calculate size scaler
 
         :param width:
@@ -300,14 +301,15 @@ class GameView(arcade.View):
         scaler_x = width/self.game_config['default_screen_size'][0]
         scaler_y = height/self.game_config['default_screen_size'][1]
         if self.game_config['scale_by']=='HEIGHT':
-            self._size_scaler=scaler_y
+            new_size_scaler=scaler_y
         elif self.game_config['scale_by']=='WIDTH':
-            self._size_scaler = scaler_x
+            new_size_scaler = scaler_x
         elif self.game_config['scale_by']=='BOTH':
-            self._size_scaler = min(scaler_x, scaler_y)
+            new_size_scaler = min(scaler_x, scaler_y)
         else:
-            pass
-        print(f'scaler: {self._size_scaler}')
+            new_size_scaler= None
+        return new_size_scaler
+        #print(f'scaler: {self._size_scaler}')
 
     def clear_all_piles(self):
         """ clear all piles """
@@ -339,11 +341,14 @@ class GameView(arcade.View):
         self.resize_list = []
         self.card_on_press = None
         # ---  Create the mats the cards go on.
-
+        # calculate propriate size
         width, height = self.window.get_size()
-        self.update_size_scaler(width, height)
+        new_size_scaler = self.calculate_size_scaler(width, height)
+        if new_size_scaler is not None:
+            self._size_scaler = new_size_scaler
+
         # Sprite list with all the mats tha cards lay on.
-        self.pile_mat_list: arcade.SpriteList = arcade.SpriteList(is_static=True)
+        self.pile_mat_list: arcade.SpriteList = arcade.SpriteList()
 
         # adding piles based on game_config
         starting_pile_id = 0

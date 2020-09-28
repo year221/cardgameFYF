@@ -174,3 +174,30 @@ class GameTextLabel(gui.UILabel):
         if font_size is not None:
             self.set_style_attrs(font_size=font_size)
         self.set_style_attrs(font_color=arcade.color.GOLD)
+
+class ResizableGameTextLabel(GameTextLabel):
+    """
+    To capture a button click, subclass the button and override on_click.
+    """
+    def __init__(self,  width, height, center_x, center_y, size_scaler=1, font_size=None, *arg, **kargs):
+        self._width = width
+        self._height = height
+        self._center_x = center_x
+        self._center_y = center_y
+        self._size_scaler = size_scaler
+        super().__init__(font_size=font_size,
+                         width=round(self._width*self._size_scaler),
+                         center_x=round(self._center_x*self._size_scaler),
+                         center_y=round(self._center_y*self._size_scaler),
+                         *arg, **kargs)
+
+    @property
+    def size_scaler(self):
+        return self._size_scaler
+    @size_scaler.setter
+    def size_scaler(self, x):
+        self._size_scaler = x
+        #self.width = round(self._width*self._size_scaler)
+        #self.height = round(self._height * self._size_scaler)
+        self.center_x = round(self._center_x * self._size_scaler)
+        self.center_y = round(self._center_y * self._size_scaler)

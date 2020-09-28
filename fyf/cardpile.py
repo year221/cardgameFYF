@@ -1,7 +1,7 @@
 """ card piles"""
 import math
 import arcade
-from clientelements import Card, GameFlatButton,GameTextLabel
+from clientelements import Card, ResizableGameTextLabel,ResizableGameFlatButton
 from utils import *
 import gamestate
 from arcade.gui import UIEvent, TEXT_INPUT,UIInputBox
@@ -90,6 +90,13 @@ class PileMat(arcade.SpriteSolidColor):
     def cardpile(self):
         return self._card_pile
 
+
+    def update_size(self):
+        image = PIL.Image.new('RGBA', (width, height), color)
+        self.texture = Texture(f"Solid-{color[0]}-{color[1]}-{color[2]}", image)
+        self._points = self.texture.hit_box_points
+
+
 import cProfile
 
 CARD_WIDTH = 140
@@ -123,16 +130,16 @@ class CardPile(arcade.SpriteList):
         self._card_scale = min(self._card_size[0]/CARD_WIDTH, self._card_size[1]/CARD_HEIGHT)
 
         # update
-        self.mat_center = int_scale_tuple(self._mat_center, self._size_scaler)
-        self.mat_size = int_scale_tuple(self._mat_size, self._size_scaler)
-        self.mat_boundary = int_scale_tuple(self._mat_boundary, self._size_scaler)
-        self.card_start = int_scale_tuple(self._card_start, self._size_scaler)
+        self.mat_center = scale_tuple(self._mat_center, self._size_scaler)
+        self.mat_size = scale_tuple(self._mat_size, self._size_scaler)
+        self.mat_boundary = scale_tuple(self._mat_boundary, self._size_scaler)
+        self.card_start = scale_tuple(self._card_start, self._size_scaler)
         self.card_max_x =  self.mat_center[0] + self.mat_size[0] // 2 - self.mat_boundary[0]
         self.step_x = round(self._card_offset[0] * self._size_scaler)
         self.step_y = round(self._card_offset[1] * self._size_scaler)
         self.card_scale = self._card_scale*self._size_scaler
 
-        self._pile_mat = PileMat(self, self.mat_size[0], self.mat_size[1], mat_color)
+        self._pile_mat = PileMat(self, round(self.mat_size[0]), round(self.mat_size[1]), mat_color)
         self._pile_mat.position = self.mat_center
         #self._card_scale_calculated = min(self._card_size[0]*self._normalizing_length/CARD_WIDTH, self._card_size[1]*self._normalizing_length/CARD_HEIGHT)
         #self.card_scale = card_scale
@@ -162,24 +169,36 @@ class CardPile(arcade.SpriteList):
         self._last_removed_card_values = []
         self._last_removed_face_status = {}
         self.other_properties = copy.deepcopy(other_properties)
+        self._ui_elements = None
+        self.setup_ui_elements()
 
     @property
     def size_scaler(self):
         return self._size_scaler
     @size_scaler.setter
     def size_scaler(self, x):
+        factor = x/self._size_scaler
+        old_card_start = self._card_start
         self._size_scaler = x
-        self.mat_center = int_scale_tuple(self._mat_center, self._size_scaler)
-        self.mat_size = int_scale_tuple(self._mat_size, self._size_scaler)
-        self.mat_boundary = int_scale_tuple(self._mat_boundary, self._size_scaler)
-        self.card_start = int_scale_tuple(self._card_start, self._size_scaler)
+        self.mat_center = scale_tuple(self._mat_center, self._size_scaler)
+        self.mat_size = scale_tuple(self._mat_size, self._size_scaler)
+        self.mat_boundary = scale_tuple(self._mat_boundary, self._size_scaler)
+        self.card_start = scale_tuple(self._card_start, self._size_scaler)
         self.card_max_x =  self.mat_center[0] + self.mat_size[0] // 2 - self.mat_boundary[0]
         self.step_x = round(self._card_offset[0] * self._size_scaler)
         self.step_y = round(self._card_offset[1] * self._size_scaler)
         self.card_scale = self._card_scale*self._size_scaler
         self._pile_mat.position = self.mat_center
-        self._pile_mat.width = self.mat_size[0]
-        self._pile_mat.height = self.mat_size[1]
+        self._pile_mat.width = round(self.mat_size[0])
+        self._pile_mat.height = round(self.mat_size[1])
+        for ui_element in self._ui_elements:
+            ui_element.size_scaler = self._size_scaler
+
+        for cardsprite in self.sprite_list:
+            cardsprite.center_x = cardsprite.center_x * factor
+            cardsprite.center_y = cardsprite.center_y * factor
+            cardsprite.scale = self.card_scale
+
 
     def clear(self):
         """ clear entire pile"""
@@ -244,61 +263,69 @@ class CardPile(arcade.SpriteList):
     @property
     def title_type(self):
         return self._title_property['type']
-    def get_ui_elements(self):
-        all_elements = []
+
+
+    def setup_ui_elements(self):
+        self._ui_elements = []
         if self._title_property['type'] != Title_Type.NONE:
             if self._title_label is None:
-                self._title_label = GameTextLabel(
+                self._title_label = ResizableGameTextLabel(
+                    width=(self.mat_size[0] / N_ELEMENT_PER_PILE),
+                    height=0,
+                    center_x=self.mat_center[0] - self.mat_size[0] / 2 + (
+                        self.mat_size[0] / N_ELEMENT_PER_PILE / 2),
+                    center_y=self.mat_center[1] + self.mat_size[1] / 2 + PILE_BUTTON_HEIGHT / 2,
                     text=self._title,
                     font_size=PILE_BUTTON_FONTSIZE,
-                    center_x=self.mat_center[0] - self.mat_size[0] // 2 + int(
-                        self.mat_size[0] / N_ELEMENT_PER_PILE / 2),
-                    center_y=self.mat_center[1] + self.mat_size[1] // 2 + PILE_BUTTON_HEIGHT // 2,
                 )
-            all_elements.append(self._title_label)
+            self._ui_elements.append(self._title_label)
 
         if self.enable_sort_button:
             if self.sort_button is None:
-                self.sort_button = GameFlatButton(
-                    self.resort_cards,
-                    font_size=PILE_BUTTON_FONTSIZE,
-                    text='SORT',
-                    center_x=self.mat_center[0] - self.mat_size[0] // 2 + int(
+                self.sort_button = ResizableGameFlatButton(
+                    click_event=self.resort_cards,
+                    width=(self.mat_size[0] / N_ELEMENT_PER_PILE),
+                    height=PILE_BUTTON_HEIGHT,
+                    center_x=self.mat_center[0] - self.mat_size[0] /2 + (
                         self.mat_size[0] / N_ELEMENT_PER_PILE / 2 * 3),
-                    center_y=self.mat_center[1] + self.mat_size[1] // 2 + PILE_BUTTON_HEIGHT // 2,
-                    width=int(self.mat_size[0] / N_ELEMENT_PER_PILE),
-                    height=PILE_BUTTON_HEIGHT
+                    center_y=self.mat_center[1] + self.mat_size[1] /2 + PILE_BUTTON_HEIGHT / 2,
+                    size_scaler=self.size_scaler,
+                    font_size=PILE_BUTTON_FONTSIZE,
+                    text='SORT'
                 )
-            all_elements.append(self.sort_button)
+            self._ui_elements.append(self.sort_button)
         if self.enable_clear_button:
 
             if self.clear_button is None:
 
-                self.clear_button = GameFlatButton(
-                    self._clear_card,
-                    font_size=PILE_BUTTON_FONTSIZE,
-                    text='CLEAR',
-                    center_x=self.mat_center[0] - self.mat_size[0] // 2 + int(
+                self.clear_button = ResizableGameFlatButton(
+                    click_event=self._clear_card,
+                    width=(self.mat_size[0] / N_ELEMENT_PER_PILE),
+                    height=PILE_BUTTON_HEIGHT,
+                    center_x=self.mat_center[0] - self.mat_size[0] / 2 + (
                         self.mat_size[0] / N_ELEMENT_PER_PILE / 2 * 5),
-                    center_y=self.mat_center[1] + self.mat_size[1] // 2 + PILE_BUTTON_HEIGHT // 2,
-                    width=int(self.mat_size[0] / N_ELEMENT_PER_PILE),
-                    height=PILE_BUTTON_HEIGHT
+                    center_y=self.mat_center[1] + self.mat_size[1] / 2 + PILE_BUTTON_HEIGHT / 2,
+                    size_scaler=self.size_scaler,
+                    font_size=PILE_BUTTON_FONTSIZE,
+                    text='CLEAR'
                 )
-            all_elements.append(self.clear_button)
+            self._ui_elements.append(self.clear_button)
         if self.enable_recover_last_removed_cards:
             if self.recover_button is None:
-                self.recover_button = GameFlatButton(
-                    self._recover_removed_card,
-                    font_size=PILE_BUTTON_FONTSIZE,
-                    text='UNDO CLEAR',
-                    center_x=self.mat_center[0] - self.mat_size[0] // 2 + int(
+                self.recover_button = ResizableGameFlatButton(
+                    click_event=self._recover_removed_card,
+                    width=(self.mat_size[0] / N_ELEMENT_PER_PILE),
+                    height=PILE_BUTTON_HEIGHT,
+                    center_x=self.mat_center[0] - self.mat_size[0] / 2 + (
                         self.mat_size[0] / N_ELEMENT_PER_PILE / 2 * 7),
-                    center_y=self.mat_center[1] + self.mat_size[1] // 2 + PILE_BUTTON_HEIGHT // 2,
-                    width=int(self.mat_size[0] / N_ELEMENT_PER_PILE),
-                    height=PILE_BUTTON_HEIGHT
+                    center_y=self.mat_center[1] + self.mat_size[1] / 2 + PILE_BUTTON_HEIGHT / 2,
+                    size_scaler=self.size_scaler,
+                    font_size=PILE_BUTTON_FONTSIZE,
+                    text='UNDO CLEAR'
                 )
-            all_elements.append(self.recover_button)
-        return all_elements
+            self._ui_elements.append(self.recover_button)
+    def get_ui_elements(self):
+        return self._ui_elements
 
     def add_card(self, card):
         """ add card """
