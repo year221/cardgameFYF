@@ -286,7 +286,9 @@ class GameView(arcade.View):
         if self.game_config is not None:
             previous_scaler = self._size_scaler
             self.update_size_scaler(width, height)
-
+            if previous_scaler!=self._size_scaler:
+                for resizable_obj in self.resize_list:
+                    resizable_obj.size_scaler = self._size_scaler
 
     def update_size_scaler(self, width, height):
         """ calculate size scaler
