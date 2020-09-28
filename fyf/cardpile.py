@@ -177,7 +177,7 @@ class CardPile(arcade.SpriteList):
         self.step_x = round(self._card_offset[0] * self._size_scaler)
         self.step_y = round(self._card_offset[1] * self._size_scaler)
         self.card_scale = self._card_scale*self._size_scaler
-        #self._pile_mat.position = self.mat_center
+        self._pile_mat.position = self.mat_center
         self._pile_mat.width = self.mat_size[0]
         self._pile_mat.height = self.mat_size[1]
 
