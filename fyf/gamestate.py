@@ -79,7 +79,6 @@ class GameState:
             return [copy.deepcopy(self)]
         elif event.type == 'UpdatePlayerInfo':
             self.player_name_per_id.update({event.player_id: event.player_name})
-            print(self)
             return [copy.deepcopy(self)]
         elif event.type == 'PlayerDisconnect':
             if event.player_id in self.player_index_per_id:
@@ -88,7 +87,6 @@ class GameState:
             if event.player_id in self.player_name_per_id:
                 self.player_name_per_id.pop(event.player_id)
 
-            print(self)
             return [copy.deepcopy(self)]
         elif event.type == 'ResetPlayerAndGame':
             self.player_name_per_id = {}
@@ -113,7 +111,7 @@ class GameState:
                     all_non_zero_ids = [w for key, w in self.player_index_per_id.items() if w>=0]
                     sorted_index = sorted(all_non_zero_ids)
                     self.player_index_per_id = {key:(sorted_index.index(val) if val>=0 else val) for key, val in self.player_index_per_id.items()}
-                    self.player_name = {index_val: self.player_name_per_id[player_id] for player_id, index_val in self.player_index_per_id.items() if index_val >0}
+                    self.player_name = {index_val: self.player_name_per_id[player_id] for player_id, index_val in self.player_index_per_id.items() if index_val >=0}
                     self.n_player = len(all_non_zero_ids)
                     self.status = 'Starting New Game'
                 return [copy.deepcopy(self)]

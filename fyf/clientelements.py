@@ -27,16 +27,16 @@ def get_minimum_distance_mat(card, mat_list):
     return mat_list[min_index], min_dist
 
 
-class Mat(arcade.SpriteSolidColor):
-    """ Mat for a card pile """
-
-    def __init__(self, pile_position_in_card_pile_list, *args, **kwargs):
-        """ Card constructor """
-
-        # Attributes for suit and value
-        super().__init__(*args, **kwargs)
-        # Image to use for the sprite when face up
-        self.pile_position_in_card_pile_list = pile_position_in_card_pile_list
+# class Mat(arcade.SpriteSolidColor):
+#     """ Mat for a card pile """
+#
+#     def __init__(self, pile_position_in_card_pile_list, *args, **kwargs):
+#         """ Card constructor """
+#
+#         # Attributes for suit and value
+#         super().__init__(*args, **kwargs)
+#         # Image to use for the sprite when face up
+#         self.pile_position_in_card_pile_list = pile_position_in_card_pile_list
 
 # Face down image
 FACE_DOWN_IMAGE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resources/images/cards/cardBack_red2.png")
@@ -46,8 +46,9 @@ COLOR_INACTIVE = (255,255,255)
 # Card constants
 CARD_VALUES = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
 CARD_SUITS = ["Spades", "Hearts", "Clubs", "Diamonds", "Joker"]
+
 class Card(arcade.Sprite):
-    """ Card sprite """
+    """ Enhanced Card sprite boject"""
 
     def __init__(self, value=None, face=False, is_active=False, scale=1):
         """ Card constructor """
@@ -107,9 +108,6 @@ class Card(arcade.Sprite):
         else:
             self.color = COLOR_INACTIVE
 
-    #def code_face_flipped(self):
-    #    return self.value, 'D' if self._is_face_up else 'U'
-
 
 class GameFlatButton(gui.UIFlatButton):
     """
@@ -117,9 +115,11 @@ class GameFlatButton(gui.UIFlatButton):
     """
     def __init__(self, click_event, font_size=None, bg_color=None, *arg, **kargs):
         super().__init__(*arg, **kargs)
-        self.click_event = click_event
+
         if font_size is not None:
             self.set_style_attrs(font_size=font_size)
+        if bg_color is not None:
+            self.set_style_attrs(bg_color=bg_color)
         self.set_style_attrs(border_color=arcade.color.BLACK,
                              font_color=arcade.color.GOLD,
                              #border_color_hover=arcade.color.BLUE,
@@ -128,11 +128,47 @@ class GameFlatButton(gui.UIFlatButton):
                              bg_color_hover=arcade.color.DARK_ORANGE,
                              bg_color_press=arcade.color.ORANGE,
                              )
+        self.click_event = click_event
 
     def on_click(self):
         """ Called when user lets off button """
         self.click_event()
 
+class ResizableGameFlatButton(GameFlatButton):
+    """
+    To capture a button click, subclass the button and override on_click.
+    """
+    def __init__(self, click_event, width, height, center_x, center_y, size_scaler=1, font_size=None, bg_color=None, *arg, **kargs):
+        self._basic_width = width
+        self._basic_height = height
+        self._center_x = center_x
+        self._center_y = center_y
+        self._font_size = font_size
+        self._size_scaler = size_scaler
+        super().__init__(click_event=click_event,
+                         font_size=round(font_size*self._size_scaler) if font_size is not None else None,
+                         bg_color=bg_color,
+                         width=round(self._basic_width*self._size_scaler), height=round(self._basic_height*self._size_scaler),
+                         center_x=round(self._center_x*self._size_scaler), center_y=round(self._center_y*self._size_scaler),
+                         *arg, **kargs)
+        if font_size is None:
+            self._font_size = self.style_attr('font_size', 12)/self._size_scaler
+
+    @property
+    def size_scaler(self):
+        return self._size_scaler
+    @size_scaler.setter
+    def size_scaler(self, x):
+        self._size_scaler = x
+        self.width = round(self._basic_width * self._size_scaler)
+        self.height = round(self._basic_height * self._size_scaler)
+        self.center_x = round(self._center_x * self._size_scaler)
+        self.center_y = round(self._center_y * self._size_scaler)
+        self.set_style_attrs(font_size=round(self._font_size * self._size_scaler))
+
+    def on_click(self):
+        """ Called when user lets off button """
+        self.click_event()
 
 
 class GameTextLabel(gui.UILabel):
@@ -144,3 +180,35 @@ class GameTextLabel(gui.UILabel):
         if font_size is not None:
             self.set_style_attrs(font_size=font_size)
         self.set_style_attrs(font_color=arcade.color.GOLD)
+
+class ResizableGameTextLabel(GameTextLabel):
+    """
+    To capture a button click, subclass the button and override on_click.
+    """
+    def __init__(self,  width, height, center_x, center_y, size_scaler=1, font_size=None, *arg, **kargs):
+        self._width = width
+        self._height = height
+        self._center_x = center_x
+        self._center_y = center_y
+        self._font_size = font_size
+        self._size_scaler = size_scaler
+
+        super().__init__(font_size=round(font_size*self._size_scaler) if font_size is not None else None,
+                         width=round(self._width*self._size_scaler),
+                         center_x=round(self._center_x*self._size_scaler),
+                         center_y=round(self._center_y*self._size_scaler),
+                         *arg, **kargs)
+
+        if font_size is None:
+            self._font_size = self.style_attr('font_size', 12)/self._size_scaler
+    @property
+    def size_scaler(self):
+        return self._size_scaler
+    @size_scaler.setter
+    def size_scaler(self, x):
+        self._size_scaler = x
+        #self.width = round(self._width*self._size_scaler)
+        #self.height = round(self._height * self._size_scaler)
+        self.center_x = round(self._center_x * self._size_scaler)
+        self.center_y = round(self._center_y * self._size_scaler)
+        self.set_style_attrs(font_size=round(self._font_size * self._size_scaler))
