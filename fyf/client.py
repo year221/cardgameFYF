@@ -59,15 +59,12 @@ class CardGame(arcade.Window):
         :param float height: New height
         """
         super().on_resize(width, height)
-        print("resizing window")
 
 
         if self.current_view is not None:
-            print("has current view")
             if hasattr(self.current_view, 'on_resize'):
                 on_resize_op = getattr(self.current_view, "on_resize", None)
                 if callable(on_resize_op):
-                    print('calling resize')
                     self.current_view.on_resize(width, height)
 
 
@@ -118,7 +115,6 @@ class ConnectView(arcade.View):
         return self.window.event_buffer
 
     def on_resize(self, width: float, height: float):
-        print("received connectview resizing")
         pass
     def connect(self, text):
         self.player_name = text
@@ -364,6 +360,7 @@ class GameView(arcade.View):
                             card_size=tuple(pile_set['card_size']),
                             card_offset=tuple(pile_set['card_offset']),
                             mat_color=tuple(pile_set['mat_color']),
+                            button_height=pile_set['button_height'] if 'button_height' in pile_set else None,
                             size_scaler=self._size_scaler,
                             sorting_rule=Sorting_Rule[pile_set['sorting_rule']],
                             auto_sort_setting=Auto_Sort[pile_set['auto_sort_setting']],
@@ -398,6 +395,7 @@ class GameView(arcade.View):
                             card_size=tuple(pile_set['card_size']),
                             card_offset=tuple(pile_set['card_offset']),
                             mat_color=tuple(pile_set['self_mat_color']) if (player_index==self.self_player_index and 'self_mat_color' in pile_set) else tuple(pile_set['mat_color']),
+                            button_height=pile_set['button_height'] if 'button_height' in pile_set else None,
                             size_scaler=self._size_scaler,
                             sorting_rule=Sorting_Rule[pile_set['sorting_rule']],
                             auto_sort_setting=Auto_Sort[pile_set['auto_sort_setting']],
@@ -426,6 +424,7 @@ class GameView(arcade.View):
                         card_size=tuple(pile_set['card_size']),
                         card_offset=tuple(pile_set['card_offset']),
                         mat_color=tuple(pile_set['mat_color']),
+                        button_height=pile_set['button_height'] if 'button_height' in pile_set else None,
                         size_scaler=self._size_scaler,
                         sorting_rule=Sorting_Rule[pile_set['sorting_rule']],
                         auto_sort_setting=Auto_Sort[pile_set['auto_sort_setting']],
@@ -442,7 +441,6 @@ class GameView(arcade.View):
 
         # add ui element
         for card_pile in self.card_pile_list:
-            print(card_pile.card_pile_id)
             new_ui_elments = card_pile.get_ui_elements()
             for element in new_ui_elments:
                 self.ui_manager.add_ui_element(element)
@@ -642,7 +640,6 @@ class GameView(arcade.View):
         old_pile = self.get_pile_for_card(cards[0])
 
         for i, dropped_card in enumerate(cards):
-            print(dropped_card)
             new_pile.add_card(dropped_card)
             old_pile.remove_card(dropped_card)
         new_event = gamestate.Event(
@@ -653,7 +650,6 @@ class GameView(arcade.View):
             cards = [card.value for card in cards]
         )
         self.event_buffer.append(new_event)
-        print('update gamestate')
         self.game_state.update_from_event(new_event)
 
     def flip_card(self, card):
