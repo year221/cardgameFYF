@@ -50,6 +50,28 @@ class CardGame(arcade.Window):
         # no GUI change is allowed in this function
         self.game_state = gamestate.GameState(**gs_dict)
 
+    def on_resize(self, width: float, height: float):
+        """
+        Override this function to add custom code to be called any time the window
+        is resized. The only responsibility here is to update the viewport.
+
+        :param float width: New width
+        :param float height: New height
+        """
+        super().on_resize(width, height)
+        print("resizing window")
+
+
+        if self.current_view is not None:
+            print("has current view")
+            if hasattr(self.current_view, 'on_resize'):
+                on_resize_op = getattr(self.current_view, "on_resize", None)
+                if callable(on_resize_op):
+                    print('calling resize')
+                    self.current_view.on_resize(width, height)
+
+
+
 class LoadingView(arcade.View):
     """ Screen loading the GUI   """
     def __init__(self, player_id=None):
@@ -94,6 +116,10 @@ class ConnectView(arcade.View):
     @property
     def event_buffer(self):
         return self.window.event_buffer
+
+    def on_resize(self, width: float, height: float):
+        print("received connectview resizing")
+        pass
     def connect(self, text):
         self.player_name = text
         new_event = gamestate.EventConnect(type='UpdatePlayerInfo',
@@ -239,7 +265,9 @@ class GameView(arcade.View):
         # Sprite list with all the mats tha cards lay on.
         self.pile_mat_list = None
         self.card_pile_list = None
-        self.resize_list = None
+        self.resize_list = []
+        self.game_config = None
+        self._size_scaler = 1
 
     @property
     def game_state(self):
@@ -251,6 +279,33 @@ class GameView(arcade.View):
     @property
     def event_buffer(self):
         return self.window.event_buffer
+
+    def on_resize(self, width, height):
+        print(f'resizing: {width} {height}')
+        # calculate new scaling factor
+        if self.game_config is not None:
+            previous_scaler = self._size_scaler
+            self.update_size_scaler(width, height)
+
+
+    def update_size_scaler(self, width, height):
+        """ calculate size scaler
+
+        :param width:
+        :param height:
+        :return:
+        """
+        scaler_x = width/self.game_config['default_screen_size'][0]
+        scaler_y = height/self.game_config['default_screen_size'][1]
+        if self.game_config['scale_by']=='HEIGHT':
+            self._size_scaler=scaler_y
+        elif self.game_config['scale_by']=='WIDTH':
+            self._size_scaler = scaler_x
+        elif self.game_config['scale_by']=='BOTH':
+            self._size_scaler = min(scaler_x, scaler_y)
+        else:
+            pass
+        print(f'scaler: {self._size_scaler}')
 
     def clear_all_piles(self):
         """ clear all piles """
@@ -267,11 +322,14 @@ class GameView(arcade.View):
 
     def setup(self, game_config, n_player = None, player_index=0):
         """ Set up the game here. Call this function to restart the game. """
+
         self.ui_manager.purge_ui_elements()
         self.n_player = n_player
         self.self_player_index = player_index
 
+
         # List of cards we are dragging with the mouse
+        self.game_config = game_config
         self.held_cards = []
         self.held_cards_original_position=[]
         self.active_cards = []
@@ -280,6 +338,8 @@ class GameView(arcade.View):
         self.card_on_press = None
         # ---  Create the mats the cards go on.
 
+        width, height = self.window.get_size()
+        self.update_size_scaler(width, height)
         # Sprite list with all the mats tha cards lay on.
         self.pile_mat_list: arcade.SpriteList = arcade.SpriteList(is_static=True)
 
@@ -297,6 +357,7 @@ class GameView(arcade.View):
                             card_size=tuple(pile_set['card_size']),
                             card_offset=tuple(pile_set['card_offset']),
                             mat_color=tuple(pile_set['mat_color']),
+                            size_scaler=self._size_scaler,
                             sorting_rule=Sorting_Rule[pile_set['sorting_rule']],
                             auto_sort_setting=Auto_Sort[pile_set['auto_sort_setting']],
                             enable_sort_button=pile_set['enable_sort_button'],
@@ -330,6 +391,7 @@ class GameView(arcade.View):
                             card_size=tuple(pile_set['card_size']),
                             card_offset=tuple(pile_set['card_offset']),
                             mat_color=tuple(pile_set['self_mat_color']) if (player_index==self.self_player_index and 'self_mat_color' in pile_set) else tuple(pile_set['mat_color']),
+                            size_scaler=self._size_scaler,
                             sorting_rule=Sorting_Rule[pile_set['sorting_rule']],
                             auto_sort_setting=Auto_Sort[pile_set['auto_sort_setting']],
                             enable_sort_button=pile_set['enable_sort_button'],
@@ -357,6 +419,7 @@ class GameView(arcade.View):
                         card_size=tuple(pile_set['card_size']),
                         card_offset=tuple(pile_set['card_offset']),
                         mat_color=tuple(pile_set['mat_color']),
+                        size_scaler=self._size_scaler,
                         sorting_rule=Sorting_Rule[pile_set['sorting_rule']],
                         auto_sort_setting=Auto_Sort[pile_set['auto_sort_setting']],
                         enable_sort_button=pile_set['enable_sort_button'],
@@ -385,6 +448,7 @@ class GameView(arcade.View):
                 height=game_button['size'][1],
                 center_x=game_button['center'][0],
                 center_y=game_button['center'][1],
+                size_scaler=self._size_scaler,
                 font_size=game_button['font_size'],
                 bg_color=tuple(game_button['bg_color']),
                 text=game_button['text']
