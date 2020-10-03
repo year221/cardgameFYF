@@ -1,20 +1,20 @@
-name: Zhaopeng you
+name: Zhao Peng You
 min_player: 0
 max_player: -1
 default_screen_size: [1400, 800]
-normalizing_length: 800
-scale_by: height
+scale_by: BOTH
 # for pixel tuples, the order is [X,Y]
 cardpiles:
   - piletype: PublicPile
     pile_set_tag: residual
     display: ALL    
-    mat_center: [0.245, 0.625]    
-    mat_size: [0.35, 0.088875] 
-    mat_boundary: [0.02625, 0.035625]
-    card_size: [0.04375, 0.059375]
-    card_offset: [0.0109375, 0.01484375]
+    mat_center: [196, 500]    
+    mat_size: [280, 71] 
+    mat_boundary: [21, 28.5]
+    card_size: [35, 47.5]
+    card_offset: [8.75, 11.875]
     mat_color: [72, 61, 139]
+    button_height: 15
     sorting_rule: SORT_BY_SUIT_THEN_NUMBER
     auto_sort_setting: NO_AUTO_SORT
     enable_sort_button: True
@@ -22,18 +22,19 @@ cardpiles:
     enable_recover_last_removed_cards: False
     title:
       type: SCORE
-      default: Hidden Pile
+      default: Hidden
       score_type: CARD_COUNT
       
   - piletype: PlayerPile
     pile_set_tag: hand
     display: SELF    
-    mat_center: [0.669375, 0.14075]    
-    mat_size: [1.26875, 0.251875] 
-    mat_boundary: [0.04375, 0.059375]
-    card_size: [0.0875, 0.11875]
-    card_offset: [0.021875, 0.11875]
+    mat_center: [535.55, 112.6]    
+    mat_size: [1015, 201.5] 
+    mat_boundary: [35, 47.5]
+    card_size: [70, 95]
+    card_offset: [17.5, 95]
     mat_color: [119, 136, 153]
+    button_height: 15
     sorting_rule: SORT_BY_SUIT_THEN_NUMBER
     auto_sort_setting: AUTO_SORT_ALL_CARDS
     enable_sort_button: True
@@ -47,12 +48,13 @@ cardpiles:
   - piletype: PlayerPile
     pile_set_tag: private
     display: SELF    
-    mat_center: [1.51375, 0.14075]    
-    mat_size: [0.35, 0.251875] 
-    mat_boundary: [0.04375, 0.059375]
-    card_size: [0.0875, 0.11875]
-    card_offset: [0.021875, 0.11875]
+    mat_center: [1211, 112.6]    
+    mat_size: [280, 201.5] 
+    mat_boundary: [35, 47.5]
+    card_size: [70, 95]
+    card_offset: [17.5, 95]
     mat_color: [119, 136, 153]
+    button_height: 15
     sorting_rule: SORT_BY_SUIT_THEN_NUMBER
     auto_sort_setting: NO_AUTO_SORT
     enable_sort_button: True
@@ -60,23 +62,25 @@ cardpiles:
     enable_recover_last_removed_cards: False
     title:
       type: SCORE
-      default: Private Pile 2
-      score_type: CARD_COUNT        
+      default: Private 2
+      score_type: CARD_COUNT 
+      
   - piletype: PlayerPile
     pile_set_tag: show
     display: ALL_PLAYER_CIRCLE
-    pile_offset : [0.385, 0.5]
+    pile_offset : [308, 400]
     piles_per_side : [-1, 2]
     pile_position_offset : 0
     direction: COUNTERCLOCKWISE
     pile_position_offset_type : OFFSET_BY_SELFPLAYERINDEX
-    starting_mat_center: [0.245, 0.375]    
-    mat_size: [0.35, 0.148125] 
-    mat_boundary: [0.04375, 0.059375]
-    card_size: [0.0875, 0.11875]
-    card_offset: [0.021875, 0.0296875]
+    starting_mat_center: [196, 300]    
+    mat_size: [280, 118.5] 
+    mat_boundary: [35, 47.5]
+    card_size: [70, 95]
+    card_offset: [17.5, 23.75]
     mat_color: [85, 107, 47]
-    self_mat_color: [4, 139, 34]    
+    self_mat_color: [4, 139, 34]
+    button_height: 15
     sorting_rule: SORT_BY_SUIT_THEN_NUMBER
     auto_sort_setting: AUTO_SORT_NEW_CARD_ONLY
     enable_sort_button: True
@@ -88,17 +92,18 @@ cardpiles:
   - piletype: PlayerPile
     pile_set_tag: score
     display: ALL_PLAYER_CIRCLE
-    pile_offset : [0.385, 0.21625]
+    pile_offset : [308, 173]
     piles_per_side : [-1, 2]
     pile_position_offset : 0
     direction: COUNTERCLOCKWISE
     pile_position_offset_type : OFFSET_BY_SELFPLAYERINDEX
-    starting_mat_center: [0.245, 0.51625]    
-    mat_size: [0.35, 0.088875] 
-    mat_boundary: [0.02625, 0.035625]
-    card_size: [0.04375, 0.059375]
-    card_offset: [0.0109375, 0.01484375]
-    mat_color: [47, 79, 79]    
+    starting_mat_center: [196, 413]    
+    mat_size: [280, 71] 
+    mat_boundary: [21, 28.5]
+    card_size: [35, 47.5]
+    card_offset: [8.75, 11.875]
+    mat_color: [47, 79, 79]
+    button_height: 15
     sorting_rule: SORT_BY_NUMBER_THEN_SUIT
     auto_sort_setting: NO_AUTO_SORT
     enable_sort_button: True
@@ -107,16 +112,17 @@ cardpiles:
     title:
       type: SCORE
       score_type: SCORE_510K
-      default: Cards won      
+      default: cards won
   - piletype: PublicPile
     pile_set_tag: shared_score
     display: ALL
-    mat_center: [0.84, 0.625]    
-    mat_size: [0.7, 0.088875] 
-    mat_boundary: [0.02625, 0.035625]
-    card_size: [0.04375, 0.059375]
-    card_offset: [0.0109375, 0.01484375]
-    mat_color: [47, 79, 79]    
+    mat_center: [672, 500]    
+    mat_size: [560, 71] 
+    mat_boundary: [21, 28.5]
+    card_size: [35, 47.5]
+    card_offset: [8.75, 11.875]
+    mat_color: [47, 79, 79]  
+    button_height: 15    
     sorting_rule: SORT_BY_NUMBER_THEN_SUIT
     auto_sort_setting: NO_AUTO_SORT
     enable_sort_button: True
@@ -125,4 +131,19 @@ cardpiles:
     title:
       type: SCORE
       score_type: SCORE_510K
-      default: Aggregated Cards won
+      default: all cards won
+gamebuttons:
+  - button: 
+    font_size: 12
+    bg_color: [139, 0, 0]
+    text: "New Game Round"
+    center: [1120, 520]
+    size: [200, 30]
+    action: initiate_game_restart
+  - button: 
+    font_size: 12
+    bg_color: [139, 0, 0]
+    text: "Leave and Reset Game"
+    center: [1120, 480]
+    size: [200, 30]
+    action: reset_player_and_game    
