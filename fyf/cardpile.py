@@ -7,7 +7,9 @@ import gamestate
 from arcade.gui import UIEvent, TEXT_INPUT,UIInputBox
 import copy
 from enum import Enum
-
+import PIL.Image
+from arcade import Texture
+from arcade.arcade_types import RGB, Point, PointList
 PILE_BUTTON_HEIGHT = 12
 PILE_BUTTON_FONTSIZE = 8
 N_ELEMENT_PER_PILE = 4
@@ -79,24 +81,33 @@ class Title_Type(Enum):
 class PileMat(arcade.SpriteSolidColor):
     """ Mat for a card pile """
 
-    def __init__(self, card_pile, *args, **kwargs):
+    def __init__(self, card_pile, width,height, color, *args, **kwargs):
         """ Card constructor """
 
         # Attributes for suit and value
-        super().__init__(*args, **kwargs)
+        super().__init__(width, height, color, *args, **kwargs)
         # Image to use for the sprite when face up
         self._card_pile = card_pile
+        self.mat_color = color
     @property
     def cardpile(self):
         return self._card_pile
 
-
-    # def update_size(self):
-    #     image = PIL.Image.new('RGBA', (width, height), color)
-    #     self.texture = Texture(f"Solid-{color[0]}-{color[1]}-{color[2]}", image)
-    #     self._points = self.texture.hit_box_points
-
-
+    # the following size setting is a temporary patch due to an arcade bug on resetting width and height
+    @property
+    def size(self):
+        return self.width, self.height
+    @size.setter
+    def size(self, x):
+        self.width = x[0]
+        self.height = x[1]
+        self._update_hit_box()
+    def _update_hit_box(self):
+        color = self.mat_color
+        image = PIL.Image.new('RGBA', (self.width, self.height), color)
+        self.texture = Texture(f"Solid-{color[0]}-{color[1]}-{color[2]}", image)
+        self._points = self.texture.hit_box_points
+        self._hit_box_shape = None
 
 CARD_WIDTH = 140
 CARD_HEIGHT = 190
@@ -193,9 +204,11 @@ class CardPile(arcade.SpriteList):
         self.card_scale = self._card_scale*self._size_scaler
         self.button_height = self._button_height*self._size_scaler
 
+
+        #self._pile_mat.width = round(self.mat_size[0])
+        #self._pile_mat.height = round(self.mat_size[1])
+        self._pile_mat.size = round(self.mat_size[0]), round(self.mat_size[1])
         self._pile_mat.position = self.mat_center
-        self._pile_mat.width = round(self.mat_size[0])
-        self._pile_mat.height = round(self.mat_size[1])
         for ui_element in self._ui_elements:
             ui_element.size_scaler = self._size_scaler
 
@@ -275,13 +288,14 @@ class CardPile(arcade.SpriteList):
         if self._title_property['type'] != Title_Type.NONE:
             if self._title_label is None:
                 self._title_label = ResizableGameTextLabel(
-                    width=(self.mat_size[0] / N_ELEMENT_PER_PILE),
-                    height=0,
-                    center_x=self.mat_center[0] - self.mat_size[0] / 2 + (
-                        self.mat_size[0] / N_ELEMENT_PER_PILE / 2),
-                    center_y=self.mat_center[1] + self.mat_size[1] / 2 + self.button_height / 2,
+                    width=(self._mat_size[0] / N_ELEMENT_PER_PILE),
+                    height=self._button_height,
+                    center_x=self._mat_center[0] - self._mat_size[0] / 2 + (
+                        self._mat_size[0] / N_ELEMENT_PER_PILE / 2),
+                    center_y=self._mat_center[1] + self._mat_size[1] / 2 + self._button_height / 2,
                     text=self._title,
-                    font_size=self.button_height/1.5,
+                    size_scaler=self._size_scaler,
+                    font_size=self._button_height/1.5,
                 )
             self._ui_elements.append(self._title_label)
 
@@ -289,13 +303,13 @@ class CardPile(arcade.SpriteList):
             if self.sort_button is None:
                 self.sort_button = ResizableGameFlatButton(
                     click_event=self.resort_cards,
-                    width=(self.mat_size[0] / N_ELEMENT_PER_PILE),
-                    height=self.button_height,
-                    center_x=self.mat_center[0] - self.mat_size[0] /2 + (
-                        self.mat_size[0] / N_ELEMENT_PER_PILE / 2 * 3),
-                    center_y=self.mat_center[1] + self.mat_size[1] /2 + self.button_height / 2,
-                    size_scaler=self.size_scaler,
-                    font_size=self.button_height/1.5,
+                    width=(self._mat_size[0] / N_ELEMENT_PER_PILE),
+                    height=self._button_height,
+                    center_x=self._mat_center[0] - self._mat_size[0] /2 + (
+                        self._mat_size[0] / N_ELEMENT_PER_PILE / 2 * 3),
+                    center_y=self._mat_center[1] + self._mat_size[1] /2 + self._button_height / 2,
+                    size_scaler=self._size_scaler,
+                    font_size=self._button_height/1.5,
                     text='SORT'
                 )
             self._ui_elements.append(self.sort_button)
@@ -305,13 +319,13 @@ class CardPile(arcade.SpriteList):
 
                 self.clear_button = ResizableGameFlatButton(
                     click_event=self._clear_card,
-                    width=(self.mat_size[0] / N_ELEMENT_PER_PILE),
-                    height=self.button_height,
-                    center_x=self.mat_center[0] - self.mat_size[0] / 2 + (
-                        self.mat_size[0] / N_ELEMENT_PER_PILE / 2 * 5),
-                    center_y=self.mat_center[1] + self.mat_size[1] / 2 + self.button_height / 2,
-                    size_scaler=self.size_scaler,
-                    font_size=self.button_height/1.5,
+                    width=(self._mat_size[0] / N_ELEMENT_PER_PILE),
+                    height=self._button_height,
+                    center_x=self._mat_center[0] - self._mat_size[0] / 2 + (
+                        self._mat_size[0] / N_ELEMENT_PER_PILE / 2 * 5),
+                    center_y=self._mat_center[1] + self._mat_size[1] / 2 + self._button_height / 2,
+                    size_scaler=self._size_scaler,
+                    font_size=self._button_height/1.5,
                     text='CLEAR'
                 )
             self._ui_elements.append(self.clear_button)
@@ -319,13 +333,13 @@ class CardPile(arcade.SpriteList):
             if self.recover_button is None:
                 self.recover_button = ResizableGameFlatButton(
                     click_event=self._recover_removed_card,
-                    width=(self.mat_size[0] / N_ELEMENT_PER_PILE),
-                    height=self.button_height,
-                    center_x=self.mat_center[0] - self.mat_size[0] / 2 + (
-                        self.mat_size[0] / N_ELEMENT_PER_PILE / 2 * 7),
-                    center_y=self.mat_center[1] + self.mat_size[1] / 2 + self.button_height / 2,
-                    size_scaler=self.size_scaler,
-                    font_size=self.button_height/1.5,
+                    width=(self._mat_size[0] / N_ELEMENT_PER_PILE),
+                    height=self._button_height,
+                    center_x=self._mat_center[0] - self._mat_size[0] / 2 + (
+                        self._mat_size[0] / N_ELEMENT_PER_PILE / 2 * 7),
+                    center_y=self._mat_center[1] + self._mat_size[1] / 2 + self._button_height / 2,
+                    size_scaler=self._size_scaler,
+                    font_size=self._button_height/1.5,
                     text='UNDO CLR'
                 )
             self._ui_elements.append(self.recover_button)
