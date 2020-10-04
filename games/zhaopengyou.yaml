@@ -17,9 +17,10 @@ cardpiles:
     button_height: 15
     sorting_rule: SORT_BY_SUIT_THEN_NUMBER
     auto_sort_setting: NO_AUTO_SORT
-    enable_sort_button: True
+    enable_sort_button: False
     enable_clear_button: False
     enable_recover_last_removed_cards: False
+    enable_flip_all: True
     title:
       type: SCORE
       default: Hidden
@@ -37,9 +38,10 @@ cardpiles:
     button_height: 15
     sorting_rule: SORT_BY_SUIT_THEN_NUMBER
     auto_sort_setting: AUTO_SORT_ALL_CARDS
-    enable_sort_button: True
+    enable_sort_button: False
     enable_clear_button: False
     enable_recover_last_removed_cards: False
+    enable_flip_all: True
     title:
       type: SCORE
       default: Your Private Pile
@@ -60,6 +62,7 @@ cardpiles:
     enable_sort_button: True
     enable_clear_button: False
     enable_recover_last_removed_cards: False
+    enable_flip_all: True
     title:
       type: SCORE
       default: Private 2
@@ -86,6 +89,7 @@ cardpiles:
     enable_sort_button: True
     enable_clear_button: True
     enable_recover_last_removed_cards: True
+    enable_flip_all: False
     title:
       type: PLAYER_NAME
       default: '' 
@@ -108,7 +112,8 @@ cardpiles:
     auto_sort_setting: NO_AUTO_SORT
     enable_sort_button: True
     enable_clear_button: False
-    enable_recover_last_removed_cards: False    
+    enable_recover_last_removed_cards: False
+    enable_flip_all: False
     title:
       type: SCORE
       score_type: SCORE_510K
@@ -127,7 +132,8 @@ cardpiles:
     auto_sort_setting: NO_AUTO_SORT
     enable_sort_button: True
     enable_clear_button: False
-    enable_recover_last_removed_cards: False    
+    enable_recover_last_removed_cards: False
+    enable_flip_all: False
     title:
       type: SCORE
       score_type: SCORE_510K

@@ -367,6 +367,7 @@ class GameView(arcade.View):
                             enable_sort_button=pile_set['enable_sort_button'],
                             enable_clear_button=pile_set['enable_clear_button'],
                             enable_recover_last_removed_cards=pile_set['enable_recover_last_removed_cards'],
+                            enable_flip_all=pile_set['enable_flip_all'],
                             title_property=pile_set['title'],
                             update_event_handle=self.add_event,
                             other_properties={'player_index': player_index}
@@ -402,6 +403,7 @@ class GameView(arcade.View):
                             enable_sort_button=pile_set['enable_sort_button'],
                             enable_clear_button=pile_set['enable_clear_button'],
                             enable_recover_last_removed_cards=pile_set['enable_recover_last_removed_cards'],
+                            enable_flip_all=pile_set['enable_flip_all'],
                             #enable_title=pile_set['enable_title'],
                             title_property=pile_set['title'],
                             #title=pile_set['default_title'],
@@ -431,6 +433,7 @@ class GameView(arcade.View):
                         enable_sort_button=pile_set['enable_sort_button'],
                         enable_clear_button=pile_set['enable_clear_button'],
                         enable_recover_last_removed_cards=pile_set['enable_recover_last_removed_cards'],
+                        enable_flip_all=pile_set['enable_flip_all'],
                         title_property=pile_set['title'],
                         update_event_handle=self.add_event
                     )

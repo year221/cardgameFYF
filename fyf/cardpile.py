@@ -120,7 +120,7 @@ class CardPile(arcade.SpriteList):
     def __init__(self, card_pile_id, mat_center, mat_size, mat_boundary, card_size, card_offset, mat_color, size_scaler=1,
                  sorting_rule=None,
                  auto_sort_setting=None,
-                 enable_sort_button=True, enable_clear_button=False, enable_recover_last_removed_cards=False,
+                 enable_sort_button=True, enable_clear_button=False, enable_recover_last_removed_cards=False, enable_flip_all=False,
                  button_height=None,
                  update_event_handle = None,
                  title_property = None,
@@ -170,6 +170,8 @@ class CardPile(arcade.SpriteList):
         #self.clear_action = clear_action
         self.enable_recover_last_removed_cards = enable_recover_last_removed_cards
         self.recover_button = None
+        self.enable_flip_all = enable_flip_all
+        self.flip_all_button = None
         #self.recover_action = recover_action
         self._title_label = None
         if title_property is None:
@@ -252,8 +254,7 @@ class CardPile(arcade.SpriteList):
             card.face = new_face
         new_event = gamestate.Event(
             type='Flip',
-            player_index=self.self_player_index,
-            cards=card_update_dict.keys(),
+            cards=list(card_update_dict.keys()),
             cards_status=card_update_dict,
         )
         self._update_event_handle(new_event)
@@ -376,7 +377,7 @@ class CardPile(arcade.SpriteList):
                     center_y=self._mat_center[1] + self._mat_size[1] / 2 + self._button_height / 2,
                     size_scaler=self._size_scaler,
                     font_size=self._button_height/1.5,
-                    text='UNDO CLR'
+                    text='FLIP ALL'
                 )
             self._ui_elements.append(self.flip_all_button)
             button_count += 1
