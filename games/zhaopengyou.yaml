@@ -147,15 +147,19 @@ cardpiles:
     card_size: [35, 47.5]
     card_offset: [0, 0.1]
     mat_color: [47, 79, 79]  
+    button_width: 50
     button_height: 15    
     vertical_button_width: 100
     vertical_button_height: 15
     per_deck_cards: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53]
-    initial_num_of_decks: 0
+    #initial_num_of_decks: 0
     face_down: True
     num_of_decks_per_generation: CONST_NPLAYER
+    enable_clear_button: True
+    enable_flip_all: False
     enable_generation: True
     enable_auto_distribution: True
+    
     destination_piles_and_cards:
       hand: 52
       hiddenpile: CONST_NPLAYER*2      

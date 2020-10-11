@@ -492,7 +492,7 @@ class CardDeck(CardPile):
                  ):
         super().__init__(card_pile_id, mat_center, mat_size, mat_boundary, card_size, card_offset, mat_color, size_scaler,
                          sorting_rule=None, auto_sort_setting=None, enable_sort_button=False,
-                         enable_clear_button=False, enable_recover_last_removed_cards=False, enable_flip_all=False,
+                         enable_recover_last_removed_cards=False,
                          update_event_handle=update_event_handle,
                          title_property=title_property,
                          other_properties=other_properties,
@@ -570,32 +570,34 @@ class CardDeck(CardPile):
         #print()
 
     def setup_vertical_ui_elements(self):
-        num_vertical_button = 0
+        #num_vertical_button = 0
         if self._enable_generation:
             if self._generation_button is None:
-                self._generation_button = ResizableGameFlatButton(
-                    click_event=self.generate_cards,
-                    width= self._vertical_button_width,
-                    height=self._vertical_button_height,
-                    center_x=self._mat_center[0] + self._mat_size[0] / 2 + self._vertical_button_width/2,
-                    center_y=self._mat_center[1] + self._mat_size[1] / 2 - (num_vertical_button*2+1) /2 * self._vertical_button_height,
-                    size_scaler=self._size_scaler,
-                    font_size=self._vertical_button_height / 1.5,
-                    text='GENERATE'
-                )
-                self._ui_elements.append(self._generation_button)
-                num_vertical_button+=1
+                self._generation_button = self._add_vertical_buttons(self.generate_cards, 'GENERATE')
+                # self._generation_button = ResizableGameFlatButton(
+                #     click_event=self.generate_cards,
+                #     width= self._vertical_button_width,
+                #     height=self._vertical_button_height,
+                #     center_x=self._mat_center[0] + self._mat_size[0] / 2 + self._vertical_button_width/2,
+                #     center_y=self._mat_center[1] + self._mat_size[1] / 2 - (num_vertical_button*2+1) /2 * self._vertical_button_height,
+                #     size_scaler=self._size_scaler,
+                #     font_size=self._vertical_button_height / 1.5,
+                #     text='GENERATE'
+                # )
+                # self._ui_elements.append(self._generation_button)
+                # num_vertical_button+=1
         if self._enable_auto_distribution:
             if self._auto_distribution_button is None:
-                self._auto_distribution_button = ResizableGameFlatButton(
-                    click_event=self.deal_cards,
-                    width= self._vertical_button_width,
-                    height=self._vertical_button_height,
-                    center_x=self._mat_center[0] + self._mat_size[0] / 2 + self._vertical_button_width/2,
-                    center_y=self._mat_center[1] + self._mat_size[1] / 2 - (num_vertical_button*2+1) /2 * self._vertical_button_height,
-                    size_scaler=self._size_scaler,
-                    font_size=self._vertical_button_height / 1.5,
-                    text='DEAL'
-                )
-                self._ui_elements.append(self._auto_distribution_button)
-                num_vertical_button+=1
+                self._auto_distribution_button = self._add_vertical_buttons(self.deal_cards, 'DEAL')
+                # self._auto_distribution_button = ResizableGameFlatButton(
+                #     click_event=self.deal_cards,
+                #     width= self._vertical_button_width,
+                #     height=self._vertical_button_height,
+                #     center_x=self._mat_center[0] + self._mat_size[0] / 2 + self._vertical_button_width/2,
+                #     center_y=self._mat_center[1] + self._mat_size[1] / 2 - (num_vertical_button*2+1) /2 * self._vertical_button_height,
+                #     size_scaler=self._size_scaler,
+                #     font_size=self._vertical_button_height / 1.5,
+                #     text='DEAL'
+                # )
+                # self._ui_elements.append(self._auto_distribution_button)
+                # num_vertical_button+=1

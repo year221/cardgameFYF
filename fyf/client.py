@@ -487,6 +487,8 @@ class GameView(arcade.View):
                     per_deck_cards=pile_set['per_deck_cards'],
                     face_down=pile_set['face_down'],
                     #initial_num_of_decks=pile_set['initial_num_of_decks'],
+                    enable_clear_button=pile_set['enable_clear_button'],
+                    enable_flip_all=pile_set['enable_flip_all'],
                     enable_generation=pile_set['enable_generation'],
                     num_of_decks_per_generation=pile_set['num_of_decks_per_generation'],
                     enable_auto_distribution=pile_set['enable_auto_distribution'],
