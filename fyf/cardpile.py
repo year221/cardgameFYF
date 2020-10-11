@@ -4,12 +4,15 @@ import arcade
 from clientelements import Card, ResizableGameTextLabel,ResizableGameFlatButton
 from utils import *
 import gamestate
-from arcade.gui import UIEvent, TEXT_INPUT,UIInputBox
+from gamestate import MAX_DECK_SIZE
+import random
+#from arcade.gui import UIEvent, TEXT_INPUT,UIInputBox
 import copy
 from enum import Enum
 import PIL.Image
 from arcade import Texture
-from arcade.arcade_types import RGB, Point, PointList
+from simpleeval import SimpleEval
+#from arcade.arcade_types import RGB, Point, PointList
 PILE_BUTTON_HEIGHT = 12
 PILE_BUTTON_FONTSIZE = 8
 N_ELEMENT_PER_PILE = 4
@@ -112,7 +115,8 @@ class PileMat(arcade.SpriteSolidColor):
 CARD_WIDTH = 140
 CARD_HEIGHT = 190
 
-#class Deck:
+
+
 
 class CardPile(arcade.SpriteList):
     """ Card sprite """
@@ -156,32 +160,31 @@ class CardPile(arcade.SpriteList):
 
         self._pile_mat = PileMat(self, round(self.mat_size[0]), round(self.mat_size[1]), mat_color)
         self._pile_mat.position = self.mat_center
-        #self._card_scale_calculated = min(self._card_size[0]*self._normalizing_length/CARD_WIDTH, self._card_size[1]*self._normalizing_length/CARD_HEIGHT)
-        #self.card_scale = card_scale
-        #self.card_size = card_size
-        self.sorting_rule = sorting_rule
-        self.auto_sort_setting = auto_sort_setting
+        if sorting_rule is None:
+            self.sorting_rule=Sorting_Rule.DO_NOT_SORT
+        else:
+            self.sorting_rule = sorting_rule
+        if auto_sort_setting is None:
+            self.auto_sort_setting=Auto_Sort.NO_AUTO_SORT
+        else:
+            self.auto_sort_setting = auto_sort_setting
         self._cached_values = []
         self._cached_face_status = {}
         self.enable_sort_button = enable_sort_button
         self.sort_button = None
         self.enable_clear_button = enable_clear_button
         self.clear_button = None
-        #self.clear_action = clear_action
         self.enable_recover_last_removed_cards = enable_recover_last_removed_cards
         self.recover_button = None
         self.enable_flip_all = enable_flip_all
         self.flip_all_button = None
-        #self.recover_action = recover_action
         self._title_label = None
         if title_property is None:
             self._title_property = dict(type = Title_Type.NONE, default='')
         else:
             self._title_property =copy.deepcopy(title_property)
         self._title_property['type'] = Title_Type[self._title_property['type']]
-        #self.enable_title = title_property['type']
         self._title = self._title_property['default']
-        #self._title = '' if title is None else title
         self._update_event_handle = update_event_handle if update_event_handle is not None else lambda x: None
         self._last_removed_card_values = []
         self._last_removed_face_status = {}
@@ -221,10 +224,15 @@ class CardPile(arcade.SpriteList):
             cardsprite.scale = self.card_scale
 
 
-    def clear(self):
+    def clear(self, cache_cleared_values=True):
         """ clear entire pile"""
-        self._last_removed_card_values = self._cached_values
-        self._last_removed_face_status = self._cached_face_status
+        if cache_cleared_values:
+            self._last_removed_card_values = self._cached_values
+            self._last_removed_face_status = self._cached_face_status
+        else:
+            self._last_removed_card_values=[]
+            self._last_removed_face_status={}
+
         self._cached_values = []
         self._cached_face_status = {}
         while self.__len__() > 0:
@@ -232,19 +240,14 @@ class CardPile(arcade.SpriteList):
 
     def _clear_card(self):
 
-        #if 'Clearable' in pile.other_properties:
-        #    if pile.other_properties['Clearable']:
         new_event = gamestate.Event(
             type='Remove',
             src_pile = self.card_pile_id,
             cards = self.to_valuelist()
         )
         self.clear()
-        #pile.clear()  # remove_card(dropped_card)
         self._update_event_handle(new_event)
 
-        # self.event_buffer.append(new_event)
-        # self.game_state.update_from_event(new_event)
     def _flip_all_card(self):
 
         card_update_dict = {}
@@ -315,8 +318,8 @@ class CardPile(arcade.SpriteList):
                     size_scaler=self._size_scaler,
                     font_size=self._button_height/1.5,
                 )
-            self._ui_elements.append(self._title_label)
-            button_count+=1
+                self._ui_elements.append(self._title_label)
+                button_count+=1
 
         if self.enable_sort_button:
             if self.sort_button is None:
@@ -331,8 +334,8 @@ class CardPile(arcade.SpriteList):
                     font_size=self._button_height/1.5,
                     text='SORT'
                 )
-            self._ui_elements.append(self.sort_button)
-            button_count += 1
+                self._ui_elements.append(self.sort_button)
+                button_count += 1
 
         if self.enable_clear_button:
 
@@ -349,8 +352,8 @@ class CardPile(arcade.SpriteList):
                     font_size=self._button_height/1.5,
                     text='CLEAR'
                 )
-            self._ui_elements.append(self.clear_button)
-            button_count += 1
+                self._ui_elements.append(self.clear_button)
+                button_count += 1
         if self.enable_recover_last_removed_cards:
             if self.recover_button is None:
                 self.recover_button = ResizableGameFlatButton(
@@ -364,8 +367,8 @@ class CardPile(arcade.SpriteList):
                     font_size=self._button_height/1.5,
                     text='UNDO CLR'
                 )
-            self._ui_elements.append(self.recover_button)
-            button_count += 1
+                self._ui_elements.append(self.recover_button)
+                button_count += 1
         if self.enable_flip_all:
             if self.flip_all_button is None:
                 self.flip_all_button = ResizableGameFlatButton(
@@ -379,8 +382,8 @@ class CardPile(arcade.SpriteList):
                     font_size=self._button_height/1.5,
                     text='FLIP ALL'
                 )
-            self._ui_elements.append(self.flip_all_button)
-            button_count += 1
+                self._ui_elements.append(self.flip_all_button)
+                button_count += 1
     def get_ui_elements(self):
         return self._ui_elements
 
@@ -462,17 +465,141 @@ class CardPile(arcade.SpriteList):
                 # AUTO_SORT_NEW_CARD_ONLY = 1
                 # AUTO_SORT_ALL_CARDS = 2
                 if self.auto_sort_setting is None or self.auto_sort_setting == Auto_Sort.NO_AUTO_SORT:
-                    for value in card_values_to_add:
+                    for value in [w for w in value_list if w in card_values_to_add]:
                         self.add_card(Card(value=value, face=face_status_dict[value]))
                 elif self.auto_sort_setting == Auto_Sort.AUTO_SORT_NEW_CARD_ONLY:
                     sorted_card_values = sort_card_value(card_values_to_add, self.sorting_rule)
                     for value in sorted_card_values:
                         self.add_card(Card(value=value, face=face_status_dict[value]))
                 else:
-                    for value in card_values_to_add:
+                    #for value in card_values_to_add:
+                    #    self.add_card(Card(value=value, face=face_status_dict[value]))
+                    for value in [w for w in value_list if w in card_values_to_add]:
                         self.add_card(Card(value=value, face=face_status_dict[value]))
-
         card_added_removed = set.union(card_values_to_remove, card_values_to_add)
         if self.auto_sort_setting == Auto_Sort.AUTO_SORT_ALL_CARDS:
             self.resort_cards()
         return card_added_removed
+
+class CardDeck(CardPile):
+    def __init__(self, card_pile_id, mat_center, mat_size, mat_boundary, card_size, card_offset, mat_color, size_scaler,
+                 vertical_button_width, vertical_button_height, button_height,
+                 update_event_handle,
+                 per_deck_cards, initial_num_of_decks=None, face_down=True,
+                 enable_generation=None, num_of_decks_per_generation=1,
+                 enable_auto_distribution=None, destination_piles_and_cards=None, title_property=None,other_properties=None,
+                 *args, **kwargs
+                 ):
+        super().__init__(card_pile_id, mat_center, mat_size, mat_boundary, card_size, card_offset, mat_color, size_scaler,
+                         sorting_rule=None, auto_sort_setting=None, enable_sort_button=False,
+                         enable_clear_button=False, enable_recover_last_removed_cards=False, enable_flip_all=False,
+                         button_height=button_height,
+                         update_event_handle=update_event_handle,
+                         title_property=title_property,
+                         other_properties=other_properties,
+                         *args, **kwargs)
+
+        self.enable_auto_distribution = enable_auto_distribution
+        self.destination_piles_and_cards=destination_piles_and_cards
+        self.per_deck_cards=per_deck_cards
+        self.initial_num_of_decks=initial_num_of_decks
+        self._enable_generation = enable_generation
+        self.num_of_decks_per_generation = num_of_decks_per_generation
+        self._enable_auto_distribution = enable_auto_distribution
+        self._per_deck_cards = per_deck_cards
+        self._vertical_button_width= vertical_button_width
+        self._vertical_button_height = vertical_button_height
+        self._button_height = button_height
+        self.face_down=face_down
+        self._generation_button = None
+        self._auto_distribution_button = None
+        self.setup_vertical_ui_elements()
+        self._simple_eval = SimpleEval()
+        print(self._auto_distribution_button)
+        print(self._enable_auto_distribution)
+    def deal_cards(self):
+        if 'pile_tag_to_pile_id' in self.other_properties:
+            card_values = self.to_valuelist()
+            all_cards_to_distribute_count = sum([len(self.other_properties['pile_tag_to_pile_id'][key])*self._eval_expression(val) for key, val in self.destination_piles_and_cards.items()])
+            if all_cards_to_distribute_count<=len(card_values):
+                starting_index = 0
+                for key, val in self.destination_piles_and_cards.items():
+                    n_cards = self._eval_expression(val)
+                    for card_pile_id in self.other_properties['pile_tag_to_pile_id'][key]:
+                        new_event = gamestate.Event(
+                            type='Move',
+                            src_pile=self.card_pile_id,
+                            dst_pile=card_pile_id,
+                            cards=card_values[starting_index:starting_index+n_cards]
+                        )
+                        self._update_event_handle(new_event, local_fast_update=False)
+                        starting_index+=n_cards
+
+    def _eval_expression(self, x):
+        if isinstance(x, str):
+            temp_str = x
+            for key, val in self.other_properties['constants'].items():
+                temp_str = temp_str.replace(key, str(val))
+            print(temp_str)
+            return self._simple_eval.eval(temp_str)
+        else:
+            return x
+    def generate_cards(self):
+        """ Send gnerate new cards event
+
+        :return:
+        """
+        #print(self.num_of_decks_per_generation)
+        random.seed(a=None)
+        # if isinstance(self.num_of_decks_per_generation, str):
+        #     temp_str = self.num_of_decks_per_generation
+        #     for key, val in self.other_properties['constants'].items():
+        #         temp_str = temp_str.replace(key, str(val))
+        #     #print(temp_str)
+        #     n_deck_per_generation = ast.literal_eval(temp_str)
+        # else:
+        n_deck_per_generation = self._eval_expression(self.num_of_decks_per_generation)
+        #print(n_deck_per_generation)
+        new_cards = [j*MAX_DECK_SIZE + w for j in range(n_deck_per_generation) for w in self.per_deck_cards]
+        face_value = 'D' if self.face_down else 'U'
+        card_status = {w: face_value for w in new_cards}
+        random.shuffle(new_cards)
+        new_event = gamestate.EventAddNewCards(
+            type='AddNewCards',
+            dst_pile = self.card_pile_id,
+            cards= new_cards,
+            cards_status= card_status
+        )
+        self._update_event_handle(new_event, local_fast_update=False)
+        #print()
+
+    def setup_vertical_ui_elements(self):
+        num_vertical_button = 0
+        if self._enable_generation:
+            if self._generation_button is None:
+                self._generation_button = ResizableGameFlatButton(
+                    click_event=self.generate_cards,
+                    width= self._vertical_button_width,
+                    height=self._vertical_button_height,
+                    center_x=self._mat_center[0] + self._mat_size[0] / 2 + self._vertical_button_width/2,
+                    center_y=self._mat_center[1] + self._mat_size[1] / 2 - (num_vertical_button*2+1) /2 * self._vertical_button_height,
+                    size_scaler=self._size_scaler,
+                    font_size=self._vertical_button_height / 1.5,
+                    text='GENERATE'
+                )
+                self._ui_elements.append(self._generation_button)
+                num_vertical_button+=1
+        if self._enable_auto_distribution:
+            if self._auto_distribution_button is None:
+                self._auto_distribution_button = ResizableGameFlatButton(
+                    click_event=self.deal_cards,
+                    width= self._vertical_button_width,
+                    height=self._vertical_button_height,
+                    center_x=self._mat_center[0] + self._mat_size[0] / 2 + self._vertical_button_width/2,
+                    center_y=self._mat_center[1] + self._mat_size[1] / 2 - (num_vertical_button*2+1) /2 * self._vertical_button_height,
+                    size_scaler=self._size_scaler,
+                    font_size=self._vertical_button_height / 1.5,
+                    text='DEAL'
+                )
+                self._ui_elements.append(self._auto_distribution_button)
+                num_vertical_button+=1
