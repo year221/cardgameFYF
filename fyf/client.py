@@ -84,7 +84,7 @@ class LoadingView(arcade.View):
 
     def on_draw(self):
         arcade.start_render()
-        arcade.draw_text('Loading. PLease Wait...', 10, 10, arcade.color.GOLD, 30)
+        arcade.draw_text('Loading. Please Wait...', 10, 10, arcade.color.GOLD, 30)
 
     def on_update(self, deltatime):
         if self.game_state:
@@ -223,6 +223,8 @@ class ConnectView(arcade.View):
         """ Called once when view is activated. """
         self.setup()
         arcade.set_background_color(arcade.color.AMAZON)
+    def on_hide_view(self):
+        self.ui_manager.unregister_handlers()
     def on_draw(self):
         arcade.start_render()
         if self.game_state:
@@ -306,6 +308,9 @@ class GameView(arcade.View):
             new_size_scaler= None
         return new_size_scaler
         #print(f'scaler: {self._size_scaler}')
+
+    def on_hide_view(self):
+        self.ui_manager.unregister_handlers()
 
     def clear_all_piles(self):
         """ clear all piles """
@@ -569,7 +574,8 @@ class GameView(arcade.View):
                         scores = utils.calculate_score(w.to_valuelist(), utils.Score_Rule[w._title_property['score_type']])
                         if w.title != str(scores):
                             if w.title.isdigit() or scores>0:
-                                w.title=str(scores)
+                                print('update_score')
+                                w.title = str(scores)
 
     def on_draw(self):
         """ Render the screen. """
