@@ -485,7 +485,8 @@ class CardDeck(CardPile):
     def __init__(self, card_pile_id, mat_center, mat_size, mat_boundary, card_size, card_offset, mat_color, size_scaler,
                  vertical_button_width, vertical_button_height, button_height,
                  update_event_handle,
-                 per_deck_cards, initial_num_of_decks=None, face_down=True,
+                 per_deck_cards, #initial_num_of_decks=None,
+                 face_down=True,
                  enable_generation=None, num_of_decks_per_generation=1,
                  enable_auto_distribution=None, destination_piles_and_cards=None, title_property=None,other_properties=None,
                  *args, **kwargs
@@ -502,7 +503,7 @@ class CardDeck(CardPile):
         self.enable_auto_distribution = enable_auto_distribution
         self.destination_piles_and_cards=destination_piles_and_cards
         self.per_deck_cards=per_deck_cards
-        self.initial_num_of_decks=initial_num_of_decks
+        #self.initial_num_of_decks=initial_num_of_decks
         self._enable_generation = enable_generation
         self.num_of_decks_per_generation = num_of_decks_per_generation
         self._enable_auto_distribution = enable_auto_distribution

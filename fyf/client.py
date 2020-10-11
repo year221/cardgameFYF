@@ -477,7 +477,7 @@ class GameView(arcade.View):
                     size_scaler=self._size_scaler,
                     per_deck_cards=pile_set['per_deck_cards'],
                     face_down=pile_set['face_down'],
-                    initial_num_of_decks=pile_set['initial_num_of_decks'],
+                    #initial_num_of_decks=pile_set['initial_num_of_decks'],
                     enable_generation=pile_set['enable_generation'],
                     num_of_decks_per_generation=pile_set['num_of_decks_per_generation'],
                     enable_auto_distribution=pile_set['enable_auto_distribution'],
@@ -532,26 +532,32 @@ class GameView(arcade.View):
             active_cards_value = [w.value for w in self.active_cards]
             # update piles
             for w in self.card_pile_list:
-                if w.card_pile_id in self.game_state.cards_in_pile:
+                if w.card_pile_id not in self.game_state.cards_in_pile:
+                    card_changed_removed = w.from_value_face([],
+                                                             self.game_state.cards_status)
+                else:
+                    card_changed_removed = w.from_value_face(self.game_state.cards_in_pile[w.card_pile_id],
+                                                             self.game_state.cards_status)
+                #if w.card_pile_id in self.game_state.cards_in_pile:
                     # update card
-                    card_changed_removed = w.from_value_face(self.game_state.cards_in_pile[w.card_pile_id], self.game_state.cards_status)
+                #card_changed_removed = w.from_value_face(self.game_state.cards_in_pile[w.card_pile_id], self.game_state.cards_status)
 
-                    # check whether hand-held cards affected
+                # check whether hand-held cards affected
 
-                    for card_value in card_changed_removed:
-                        if card_value in held_cards_value:
-                            index = held_cards_value.index(card_value)
-                            if self.held_cards[index] == self.card_on_press:
-                                self.card_on_press = None
-                            self.held_cards.remove(self.held_cards[index])
-                            self.held_cards_original_position.remove(self.held_cards_original_position[index])
-                            held_cards_value.remove(held_cards_value[index])
+                for card_value in card_changed_removed:
+                    if card_value in held_cards_value:
+                        index = held_cards_value.index(card_value)
+                        if self.held_cards[index] == self.card_on_press:
+                            self.card_on_press = None
+                        self.held_cards.remove(self.held_cards[index])
+                        self.held_cards_original_position.remove(self.held_cards_original_position[index])
+                        held_cards_value.remove(held_cards_value[index])
 
-                        if card_value in active_cards_value:
-                            index = active_cards_value.index(card_value)
-                            self.active_cards[index].active = False
-                            self.active_cards.remove(self.active_cards[index])
-                            active_cards_value.remove(active_cards_value[index])
+                    if card_value in active_cards_value:
+                        index = active_cards_value.index(card_value)
+                        self.active_cards[index].active = False
+                        self.active_cards.remove(self.active_cards[index])
+                        active_cards_value.remove(active_cards_value[index])
 
                 if w.title_type == Title_Type.PLAYER_NAME:
                     if 'player_index' in w.other_properties:
@@ -731,18 +737,18 @@ class GameView(arcade.View):
 
 
     def initiate_game_restart(self):
-        n_decks= self.n_player
-        n_residual_card =  self.n_player*2
-        n_card_per_player = (n_decks * 54 - n_residual_card) // self.n_player
-        n_residual_card = n_decks * 54 - n_card_per_player*self.n_player
-        n_card_per_pile = {w+1: n_card_per_player for w in range(self.n_player)}
-        n_card_per_pile[0]=n_residual_card
+        #n_decks= self.n_player
+        #n_residual_card =  self.n_player*2
+        #n_card_per_player = (n_decks * 54 - n_residual_card) // self.n_player
+        #n_residual_card = n_decks * 54 - n_card_per_player*self.n_player
+        #n_card_per_pile = {w+1: n_card_per_player for w in range(self.n_player)}
+        #n_card_per_pile[0]=n_residual_card
         new_event = gamestate.Event(type='StartNewGame',
                                    #player_index=self.self_player_index,
-                                   n_player = self.n_player,
-                                   n_pile = self.n_pile,
-                                   n_card_per_pile = n_card_per_pile,
-                                   face_down_pile = [0],
+                                   #n_player = self.n_player,
+                                   #n_pile = self.n_pile,
+                                   #n_card_per_pile = n_card_per_pile,
+                                   #face_down_pile = [0],
                                    )
         self.event_buffer.append(new_event)
 

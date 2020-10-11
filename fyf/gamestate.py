@@ -45,29 +45,38 @@ class GameState:
         if event.type == 'GetGameState':
             return [copy.deepcopy(self)]
         elif event.type == 'Move':
-            if event.src_pile in self.cards_in_pile.keys() and event.dst_pile in self.cards_in_pile.keys():
+            if event.src_pile not in self.cards_in_pile.keys():
+                self.cards_in_pile.update({event.src_pile:[]})
+            if event.dst_pile not in self.cards_in_pile.keys():
+                self.cards_in_pile.update({event.dst_pile:[]})
+            #if event.src_pile in self.cards_in_pile.keys() and event.dst_pile in self.cards_in_pile.keys():
 
-                if not (set(event.cards) - set(self.cards_in_pile[event.src_pile])):
-                    for card in event.cards:
-                        self.cards_in_pile[event.src_pile].remove(card)
-                        self.cards_in_pile[event.dst_pile].append(card)
+            if not (set(event.cards) - set(self.cards_in_pile[event.src_pile])):
+                for card in event.cards:
+                    self.cards_in_pile[event.src_pile].remove(card)
+                    self.cards_in_pile[event.dst_pile].append(card)
             self.status = 'In Game'
             return [copy.deepcopy(self)]
         #print(self.cards_in_pile.keys())
         elif event.type == 'Add':
-            if event.dst_pile in self.cards_in_pile.keys():
-                for card in event.cards:
-                    if card not in self.cards_in_pile[event.dst_pile]:
-                        self.cards_in_pile[event.dst_pile].append(card)
-                self.cards_status.update(event.cards_status)
+
+            if event.dst_pile not in self.cards_in_pile.keys():
+                self.cards_in_pile.update({event.dst_pile:[]})
+            #if event.dst_pile in self.cards_in_pile.keys():
+            for card in event.cards:
+                if card not in self.cards_in_pile[event.dst_pile]:
+                    self.cards_in_pile[event.dst_pile].append(card)
+            self.cards_status.update(event.cards_status)
             self.status = 'In Game'
             return [copy.deepcopy(self)]
         elif event.type == 'Remove':
-            if event.src_pile in self.cards_in_pile.keys():
+            if event.src_pile not in self.cards_in_pile.keys():
+                self.cards_in_pile.update({event.src_pile:[]})
+            #if event.src_pile in self.cards_in_pile.keys():
 
-                if not (set(event.cards) - set(self.cards_in_pile[event.src_pile])):
-                    for card in event.cards:
-                        self.cards_in_pile[event.src_pile].remove(card)
+            if not (set(event.cards) - set(self.cards_in_pile[event.src_pile])):
+                for card in event.cards:
+                    self.cards_in_pile[event.src_pile].remove(card)
             self.status = 'In Game'
             return [copy.deepcopy(self)]
         elif event.type == 'Flip':
@@ -77,18 +86,21 @@ class GameState:
         elif event.type == 'AddNewCards':
             max_value_card = max([max(val, default=-1) for _, val in self.cards_in_pile.items()], default=-1)
             value_offset = math.ceil((max_value_card+1)/MAX_DECK_SIZE) * MAX_DECK_SIZE
-            if event.dst_pile in self.cards_in_pile.keys():
-                for card in event.cards:
-                    if card+value_offset not in self.cards_in_pile[event.dst_pile]:
-                        self.cards_in_pile[event.dst_pile].append(card+value_offset)
-                self.cards_status.update({key+value_offset:val for key, val in event.cards_status.items()})
+            if event.dst_pile not in self.cards_in_pile.keys():
+                self.cards_in_pile.update({event.dst_pile:[]})
+            #if event.dst_pile in self.cards_in_pile.keys():
+            for card in event.cards:
+                if card+value_offset not in self.cards_in_pile[event.dst_pile]:
+                    self.cards_in_pile[event.dst_pile].append(card+value_offset)
+            self.cards_status.update({key+value_offset:val for key, val in event.cards_status.items()})
             self.status = 'In Game'
             return [copy.deepcopy(self)]
 
         elif event.type == 'StartNewGame':
             #self.n_player = event.n_player
-            self.n_pile = event.n_pile
-            self.cards_in_pile = {w: [] for w in range(self.n_pile)}
+            #self.n_pile = event.n_pile
+            self.cards_in_pile = {}
+            #self.cards_in_pile = {w: [] for w in range(self.n_pile)}
             self.cards_status = {}
             #all_cards = list(range(sum(event.n_card_per_pile.values())))
             #self.cards_status.update({w: 'U' for w in all_cards})
@@ -175,9 +187,9 @@ class EventCardChange:
 class EventGameControl:
     type: str
     n_player : int = 0
-    n_card_per_pile : Dict[int, int] = field(default_factory=dict)
-    n_pile : int = 0
-    face_down_pile : List[int] = field(default_factory=list)
+    # : Dict[int, int] = field(default_factory=dict)
+    #n_pile : int = 0
+    #face_down_pile : List[int] = field(default_factory=list)
     player_id: str = ''
 
 @dataclass
@@ -204,9 +216,9 @@ class Event:
     cards: List[int] = field(default_factory=list)
     cards_status: Dict[int, str] = field(default_factory=dict)
     n_player : int = 6
-    n_card_per_pile : Dict[int, int] = field(default_factory=dict)
-    n_pile : int = 19
-    face_down_pile : List[int] = field(default_factory=list)
+    #n_card_per_pile : Dict[int, int] = field(default_factory=dict)
+    #n_pile : int = 19
+    #face_down_pile : List[int] = field(default_factory=list)
     player_name : str = ''
     player_id : str = ''
 
