@@ -15,6 +15,7 @@ from simpleeval import SimpleEval
 #from arcade.arcade_types import RGB, Point, PointList
 PILE_BUTTON_HEIGHT = 12
 PILE_BUTTON_FONTSIZE = 8
+PILE_BUTTON_WIDTH = 100
 N_ELEMENT_PER_PILE = 4
 
 def calculate_circular_pile_set_positions(starting_mat_center, pile_offset, piles_per_side,
@@ -125,7 +126,8 @@ class CardPile(arcade.SpriteList):
                  sorting_rule=None,
                  auto_sort_setting=None,
                  enable_sort_button=True, enable_clear_button=False, enable_recover_last_removed_cards=False, enable_flip_all=False,
-                 button_height=None,
+                 button_width=None, button_height=None,
+                 vertical_button_width=None, vertical_button_height=None,
                  update_event_handle = None,
                  title_property = None,
                  other_properties=None, *args, **kwargs):
@@ -144,9 +146,23 @@ class CardPile(arcade.SpriteList):
         self._card_offset = card_offset
         self._card_size = card_size
         self._card_scale = min(self._card_size[0]/CARD_WIDTH, self._card_size[1]/CARD_HEIGHT)
+        if button_width is None:
+            self._button_width = self._mat_size[0] / N_ELEMENT_PER_PILE
+        else:
+            self._button_width = button_width
         if button_height is None:
-            button_height = PILE_BUTTON_HEIGHT
-        self._button_height = button_height
+            self._button_height = PILE_BUTTON_HEIGHT
+        else:
+            self._button_height = button_height
+        if vertical_button_height is None:
+            self._vertical_button_height = PILE_BUTTON_HEIGHT
+        else:
+            self._vertical_button_height = vertical_button_height
+        if vertical_button_width is None:
+            self._vertical_button_width = PILE_BUTTON_WIDTH
+        else:
+            self._vertical_button_width = vertical_button_width
+
         # update
         self.mat_center = scale_tuple(self._mat_center, self._size_scaler)
         self.mat_size = scale_tuple(self._mat_size, self._size_scaler)
@@ -156,7 +172,7 @@ class CardPile(arcade.SpriteList):
         self.step_x = round(self._card_offset[0] * self._size_scaler)
         self.step_y = round(self._card_offset[1] * self._size_scaler)
         self.card_scale = self._card_scale*self._size_scaler
-        self.button_height = self._button_height*self._size_scaler
+        #self.button_height = self._button_height*self._size_scaler
 
         self._pile_mat = PileMat(self, round(self.mat_size[0]), round(self.mat_size[1]), mat_color)
         self._pile_mat.position = self.mat_center
@@ -190,8 +206,10 @@ class CardPile(arcade.SpriteList):
         self._last_removed_face_status = {}
         self.other_properties = copy.deepcopy(other_properties)
         self._ui_elements = None
+        self._button_count = 0
+        self._vertical_button_count = 0
         self.setup_ui_elements()
-        self._button_count=0
+
 
     @property
     def size_scaler(self):
@@ -209,7 +227,7 @@ class CardPile(arcade.SpriteList):
         self.step_x = round(self._card_offset[0] * self._size_scaler)
         self.step_y = round(self._card_offset[1] * self._size_scaler)
         self.card_scale = self._card_scale*self._size_scaler
-        self.button_height = self._button_height*self._size_scaler
+        #self.button_height = self._button_height*self._size_scaler
 
 
         #self._pile_mat.width = round(self.mat_size[0])
@@ -223,7 +241,6 @@ class CardPile(arcade.SpriteList):
             cardsprite.center_x = cardsprite.center_x * factor
             cardsprite.center_y = cardsprite.center_y * factor
             cardsprite.scale = self.card_scale
-
 
     def clear(self, cache_cleared_values=True):
         """ clear entire pile"""
@@ -263,7 +280,6 @@ class CardPile(arcade.SpriteList):
         )
         self._update_event_handle(new_event)
 
-
     def _recover_removed_card(self):
         """ recover previously cleared cards"""
         card_recovered = self._last_removed_card_values
@@ -285,7 +301,6 @@ class CardPile(arcade.SpriteList):
     def mat(self):
         return self._pile_mat
 
-
     @property
     def title(self):
         return self._title
@@ -306,10 +321,10 @@ class CardPile(arcade.SpriteList):
     def _add_horizontal_buttons(self, click_event, text):
         c_button = ResizableGameFlatButton(
             click_event=click_event,
-            width=(self._mat_size[0] / N_ELEMENT_PER_PILE),
+            width=self._button_width,
             height=self._button_height,
             center_x=self._mat_center[0] - self._mat_size[0] / 2 + (
-                    self._mat_size[0] / N_ELEMENT_PER_PILE * (self._button_count * 2 + 1) / 2),
+                    self._button_width * (self._button_count * 2 + 1) / 2),
             center_y=self._mat_center[1] + self._mat_size[1] / 2 + self._button_height / 2,
             size_scaler=self._size_scaler,
             font_size=self._button_height / 1.5,
@@ -317,6 +332,23 @@ class CardPile(arcade.SpriteList):
         )
         self._ui_elements.append(c_button)
         self._button_count += 1
+        return c_button
+
+    def _add_vertical_buttons(self, click_event, text):
+        c_button = ResizableGameFlatButton(
+            click_event=click_event,
+            width=self._vertical_button_width,
+            height=self._vertical_button_height,
+            center_x=self._mat_center[0] + self._mat_size[0] / 2 + self._vertical_button_width / 2,
+            center_y=self._mat_center[1] + self._mat_size[1] / 2 - (
+                        self._vertical_button_count * 2 + 1) / 2 * self._vertical_button_height,
+            size_scaler=self._size_scaler,
+            font_size=self._vertical_button_height / 1.5,
+            text=text
+        )
+
+        self._ui_elements.append(c_button)
+        self._vertical_button_count += 1
         return c_button
 
     def setup_ui_elements(self):
@@ -328,7 +360,7 @@ class CardPile(arcade.SpriteList):
                     width=(self._mat_size[0] / N_ELEMENT_PER_PILE),
                     height=self._button_height,
                     center_x=self._mat_center[0] - self._mat_size[0] / 2 + (
-                        self._mat_size[0] / N_ELEMENT_PER_PILE * (button_count*2+1) /2),
+                        self._mat_size[0] / N_ELEMENT_PER_PILE * (self._button_count*2+1) /2),
                     center_y=self._mat_center[1] + self._mat_size[1] / 2 + self._button_height / 2,
                     text=self._title,
                     size_scaler=self._size_scaler,
@@ -340,69 +372,20 @@ class CardPile(arcade.SpriteList):
         if self.enable_sort_button:
             if self.sort_button is None:
                 self.sort_button= self._add_horizontal_buttons(self.resort_cards, 'SORT')
-                # self.sort_button = ResizableGameFlatButton(
-                #     click_event=self.resort_cards,
-                #     width=(self._mat_size[0] / N_ELEMENT_PER_PILE),
-                #     height=self._button_height,
-                #     center_x=self._mat_center[0] - self._mat_size[0] /2 + (
-                #         self._mat_size[0] / N_ELEMENT_PER_PILE * (button_count*2+1) /2),
-                #     center_y=self._mat_center[1] + self._mat_size[1] /2 + self._button_height / 2,
-                #     size_scaler=self._size_scaler,
-                #     font_size=self._button_height/1.5,
-                #     text='SORT'
-                # )
-                # self._ui_elements.append(self.sort_button)
-                # button_count += 1
 
         if self.enable_clear_button:
 
             if self.clear_button is None:
                 self.clear_button = self._add_horizontal_buttons(self._clear_card, 'CLEAR')
-                # self.clear_button = ResizableGameFlatButton(
-                #     click_event=self._clear_card,
-                #     width=(self._mat_size[0] / N_ELEMENT_PER_PILE),
-                #     height=self._button_height,
-                #     center_x=self._mat_center[0] - self._mat_size[0] / 2 + (
-                #         self._mat_size[0] / N_ELEMENT_PER_PILE * (button_count*2+1) /2),
-                #     center_y=self._mat_center[1] + self._mat_size[1] / 2 + self._button_height / 2,
-                #     size_scaler=self._size_scaler,
-                #     font_size=self._button_height/1.5,
-                #     text='CLEAR'
-                # )
-                # self._ui_elements.append(self.clear_button)
-                # button_count += 1
+
         if self.enable_recover_last_removed_cards:
             if self.recover_button is None:
                 self.recover_button = self._add_horizontal_buttons(self._recover_removed_card, 'UNDO CLR')
-                # self.recover_button = ResizableGameFlatButton(
-                #     click_event=self._recover_removed_card,
-                #     width=(self._mat_size[0] / N_ELEMENT_PER_PILE),
-                #     height=self._button_height,
-                #     center_x=self._mat_center[0] - self._mat_size[0] / 2 + (
-                #         self._mat_size[0] / N_ELEMENT_PER_PILE * (button_count*2+1) /2),
-                #     center_y=self._mat_center[1] + self._mat_size[1] / 2 + self._button_height / 2,
-                #     size_scaler=self._size_scaler,
-                #     font_size=self._button_height/1.5,
-                #     text='UNDO CLR'
-                # )
-                # self._ui_elements.append(self.recover_button)
-                # button_count += 1
+
         if self.enable_flip_all:
             if self.flip_all_button is None:
                 self.flip_all_button = self._add_horizontal_buttons(self._recover_removed_card, 'FLIP ALL')
-                # self.flip_all_button = ResizableGameFlatButton(
-                #     click_event=self._flip_all_card,
-                #     width=(self._mat_size[0] / N_ELEMENT_PER_PILE),
-                #     height=self._button_height,
-                #     center_x=self._mat_center[0] - self._mat_size[0] / 2 + (
-                #         self._mat_size[0] / N_ELEMENT_PER_PILE * (button_count*2+1) /2),
-                #     center_y=self._mat_center[1] + self._mat_size[1] / 2 + self._button_height / 2,
-                #     size_scaler=self._size_scaler,
-                #     font_size=self._button_height/1.5,
-                #     text='FLIP ALL'
-                # )
-                # self._ui_elements.append(self.flip_all_button)
-                # button_count += 1
+
     def get_ui_elements(self):
         return self._ui_elements
 
@@ -432,8 +415,6 @@ class CardPile(arcade.SpriteList):
     def to_face_staus(self):
         """ export as dictionary"""
         return {w.value: w.face for w in self}
-
-
 
     def remove_card(self, card):
         self.remove(card)
@@ -502,7 +483,6 @@ class CardPile(arcade.SpriteList):
 
 class CardDeck(CardPile):
     def __init__(self, card_pile_id, mat_center, mat_size, mat_boundary, card_size, card_offset, mat_color, size_scaler,
-                 vertical_button_width, vertical_button_height, button_height,
                  update_event_handle,
                  per_deck_cards, #initial_num_of_decks=None,
                  face_down=True,
@@ -513,7 +493,6 @@ class CardDeck(CardPile):
         super().__init__(card_pile_id, mat_center, mat_size, mat_boundary, card_size, card_offset, mat_color, size_scaler,
                          sorting_rule=None, auto_sort_setting=None, enable_sort_button=False,
                          enable_clear_button=False, enable_recover_last_removed_cards=False, enable_flip_all=False,
-                         button_height=button_height,
                          update_event_handle=update_event_handle,
                          title_property=title_property,
                          other_properties=other_properties,
@@ -527,9 +506,6 @@ class CardDeck(CardPile):
         self.num_of_decks_per_generation = num_of_decks_per_generation
         self._enable_auto_distribution = enable_auto_distribution
         self._per_deck_cards = per_deck_cards
-        self._vertical_button_width= vertical_button_width
-        self._vertical_button_height = vertical_button_height
-        self._button_height = button_height
         self.face_down=face_down
         self._generation_button = None
         self._auto_distribution_button = None
