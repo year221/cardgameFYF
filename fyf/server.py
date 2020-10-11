@@ -28,7 +28,7 @@ async def update_from_client(gs: gamestate.GameState, gs_buffer: list, sock: Soc
             new_gs_ls = gs.update_from_event(gamestate.Event(**event_dict))
             print(new_gs_ls)
             if new_gs_ls:
-                gs_buffer = new_gs_ls + gs_buffer
+                gs_buffer += new_gs_ls
 
 
             #print('***')
@@ -55,7 +55,7 @@ async def ticker(sock1, sock2):
     try:
         while True:
             if gs_buffer:
-                gs_state = gs_buffer.pop()
+                gs_state = gs_buffer.pop(0)
                 print("*")
                 print(gs_state.to_json())
                 await sock1.send_string(gs_state.to_json())
