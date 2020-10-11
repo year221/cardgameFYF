@@ -191,6 +191,7 @@ class CardPile(arcade.SpriteList):
         self.other_properties = copy.deepcopy(other_properties)
         self._ui_elements = None
         self.setup_ui_elements()
+        self._button_count=0
 
     @property
     def size_scaler(self):
@@ -302,10 +303,25 @@ class CardPile(arcade.SpriteList):
     def title_type(self):
         return self._title_property['type']
 
+    def _add_horizontal_buttons(self, click_event, text):
+        c_button = ResizableGameFlatButton(
+            click_event=click_event,
+            width=(self._mat_size[0] / N_ELEMENT_PER_PILE),
+            height=self._button_height,
+            center_x=self._mat_center[0] - self._mat_size[0] / 2 + (
+                    self._mat_size[0] / N_ELEMENT_PER_PILE * (self._button_count * 2 + 1) / 2),
+            center_y=self._mat_center[1] + self._mat_size[1] / 2 + self._button_height / 2,
+            size_scaler=self._size_scaler,
+            font_size=self._button_height / 1.5,
+            text=text
+        )
+        self._ui_elements.append(c_button)
+        self._button_count += 1
+        return c_button
 
     def setup_ui_elements(self):
         self._ui_elements = []
-        button_count = 0
+        #button_count = 0
         if self._title_property['type'] != Title_Type.NONE:
             if self._title_label is None:
                 self._title_label = ResizableGameTextLabel(
@@ -319,71 +335,74 @@ class CardPile(arcade.SpriteList):
                     font_size=self._button_height/1.5,
                 )
                 self._ui_elements.append(self._title_label)
-                button_count+=1
+                self._button_count+=1
 
         if self.enable_sort_button:
             if self.sort_button is None:
-                self.sort_button = ResizableGameFlatButton(
-                    click_event=self.resort_cards,
-                    width=(self._mat_size[0] / N_ELEMENT_PER_PILE),
-                    height=self._button_height,
-                    center_x=self._mat_center[0] - self._mat_size[0] /2 + (
-                        self._mat_size[0] / N_ELEMENT_PER_PILE * (button_count*2+1) /2),
-                    center_y=self._mat_center[1] + self._mat_size[1] /2 + self._button_height / 2,
-                    size_scaler=self._size_scaler,
-                    font_size=self._button_height/1.5,
-                    text='SORT'
-                )
-                self._ui_elements.append(self.sort_button)
-                button_count += 1
+                self.sort_button= self._add_horizontal_buttons(self.resort_cards, 'SORT')
+                # self.sort_button = ResizableGameFlatButton(
+                #     click_event=self.resort_cards,
+                #     width=(self._mat_size[0] / N_ELEMENT_PER_PILE),
+                #     height=self._button_height,
+                #     center_x=self._mat_center[0] - self._mat_size[0] /2 + (
+                #         self._mat_size[0] / N_ELEMENT_PER_PILE * (button_count*2+1) /2),
+                #     center_y=self._mat_center[1] + self._mat_size[1] /2 + self._button_height / 2,
+                #     size_scaler=self._size_scaler,
+                #     font_size=self._button_height/1.5,
+                #     text='SORT'
+                # )
+                # self._ui_elements.append(self.sort_button)
+                # button_count += 1
 
         if self.enable_clear_button:
 
             if self.clear_button is None:
-
-                self.clear_button = ResizableGameFlatButton(
-                    click_event=self._clear_card,
-                    width=(self._mat_size[0] / N_ELEMENT_PER_PILE),
-                    height=self._button_height,
-                    center_x=self._mat_center[0] - self._mat_size[0] / 2 + (
-                        self._mat_size[0] / N_ELEMENT_PER_PILE * (button_count*2+1) /2),
-                    center_y=self._mat_center[1] + self._mat_size[1] / 2 + self._button_height / 2,
-                    size_scaler=self._size_scaler,
-                    font_size=self._button_height/1.5,
-                    text='CLEAR'
-                )
-                self._ui_elements.append(self.clear_button)
-                button_count += 1
+                self.clear_button = self._add_horizontal_buttons(self._clear_card, 'CLEAR')
+                # self.clear_button = ResizableGameFlatButton(
+                #     click_event=self._clear_card,
+                #     width=(self._mat_size[0] / N_ELEMENT_PER_PILE),
+                #     height=self._button_height,
+                #     center_x=self._mat_center[0] - self._mat_size[0] / 2 + (
+                #         self._mat_size[0] / N_ELEMENT_PER_PILE * (button_count*2+1) /2),
+                #     center_y=self._mat_center[1] + self._mat_size[1] / 2 + self._button_height / 2,
+                #     size_scaler=self._size_scaler,
+                #     font_size=self._button_height/1.5,
+                #     text='CLEAR'
+                # )
+                # self._ui_elements.append(self.clear_button)
+                # button_count += 1
         if self.enable_recover_last_removed_cards:
             if self.recover_button is None:
-                self.recover_button = ResizableGameFlatButton(
-                    click_event=self._recover_removed_card,
-                    width=(self._mat_size[0] / N_ELEMENT_PER_PILE),
-                    height=self._button_height,
-                    center_x=self._mat_center[0] - self._mat_size[0] / 2 + (
-                        self._mat_size[0] / N_ELEMENT_PER_PILE * (button_count*2+1) /2),
-                    center_y=self._mat_center[1] + self._mat_size[1] / 2 + self._button_height / 2,
-                    size_scaler=self._size_scaler,
-                    font_size=self._button_height/1.5,
-                    text='UNDO CLR'
-                )
-                self._ui_elements.append(self.recover_button)
-                button_count += 1
+                self.recover_button = self._add_horizontal_buttons(self._recover_removed_card, 'UNDO CLR')
+                # self.recover_button = ResizableGameFlatButton(
+                #     click_event=self._recover_removed_card,
+                #     width=(self._mat_size[0] / N_ELEMENT_PER_PILE),
+                #     height=self._button_height,
+                #     center_x=self._mat_center[0] - self._mat_size[0] / 2 + (
+                #         self._mat_size[0] / N_ELEMENT_PER_PILE * (button_count*2+1) /2),
+                #     center_y=self._mat_center[1] + self._mat_size[1] / 2 + self._button_height / 2,
+                #     size_scaler=self._size_scaler,
+                #     font_size=self._button_height/1.5,
+                #     text='UNDO CLR'
+                # )
+                # self._ui_elements.append(self.recover_button)
+                # button_count += 1
         if self.enable_flip_all:
             if self.flip_all_button is None:
-                self.flip_all_button = ResizableGameFlatButton(
-                    click_event=self._flip_all_card,
-                    width=(self._mat_size[0] / N_ELEMENT_PER_PILE),
-                    height=self._button_height,
-                    center_x=self._mat_center[0] - self._mat_size[0] / 2 + (
-                        self._mat_size[0] / N_ELEMENT_PER_PILE * (button_count*2+1) /2),
-                    center_y=self._mat_center[1] + self._mat_size[1] / 2 + self._button_height / 2,
-                    size_scaler=self._size_scaler,
-                    font_size=self._button_height/1.5,
-                    text='FLIP ALL'
-                )
-                self._ui_elements.append(self.flip_all_button)
-                button_count += 1
+                self.flip_all_button = self._add_horizontal_buttons(self._recover_removed_card, 'FLIP ALL')
+                # self.flip_all_button = ResizableGameFlatButton(
+                #     click_event=self._flip_all_card,
+                #     width=(self._mat_size[0] / N_ELEMENT_PER_PILE),
+                #     height=self._button_height,
+                #     center_x=self._mat_center[0] - self._mat_size[0] / 2 + (
+                #         self._mat_size[0] / N_ELEMENT_PER_PILE * (button_count*2+1) /2),
+                #     center_y=self._mat_center[1] + self._mat_size[1] / 2 + self._button_height / 2,
+                #     size_scaler=self._size_scaler,
+                #     font_size=self._button_height/1.5,
+                #     text='FLIP ALL'
+                # )
+                # self._ui_elements.append(self.flip_all_button)
+                # button_count += 1
     def get_ui_elements(self):
         return self._ui_elements
 
