@@ -233,7 +233,7 @@ class ResizableUIInputBox(gui.UIInputBox):
                          center_x=round(self._base_center_x*self._size_scaler),
                          center_y=round(self._base_center_y*self._size_scaler),
                          *arg, **kargs)
-        self.set_style_attrs(border_width=0, margin_left=0, vmargin=0)
+        self.set_style_attrs(border_width=0, margin_left=0, vmargin=0, border_color=arcade.color.GRAY)
         if font_size is not None:
             self.set_style_attrs(font_size=font_size * self._size_scaler)
         else:
