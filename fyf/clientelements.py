@@ -250,3 +250,37 @@ class ResizableUIInputBox(gui.UIInputBox):
         self.center_y = round(self._base_center_y * self._size_scaler)
         self.set_style_attrs(font_size=round(self._base_font_size * self._size_scaler))
         self.render()
+
+class SyncedResizableUIInputBox(ResizableUIInputBox):
+    def __init__(self,  width, height, center_x, center_y, size_scaler=1, font_size=None, on_text_update_hanlder=None, *arg, **kargs):
+
+        self._on_text_update_hanlder = on_text_update_hanlder
+        super().__init__(width, height, center_x, center_y, size_scaler=size_scaler, font_size=font_size, *arg, **kargs)
+        self._previous_updated_text = self.text
+
+    @property
+    def text(self):
+        """
+        Stored text
+        """
+        return super().text
+    @text.setter
+    def text(self, value):
+        super(ResizableUIInputBox, ResizableUIInputBox).text.__set__(self, value)
+        self._previous_updated_text = value
+
+    def _on_text_update(self):
+        if self.text != self._previous_updated_text:
+            self._on_text_update_hanlder(self.text)
+            self._previous_updated_text = self.text
+
+    def on_unfocus(self):
+        super().on_unfocus()
+        self._on_text_update()
+    def on_ui_event(self, event: gui.UIEvent):
+        # redefine on_ui_event to trigger a handler
+        super().on_ui_event(event)
+        if self.focused:
+            if event.type == gui.TEXT_INPUT and event.get('text') == '\r':
+                self._on_text_update()
+                return
