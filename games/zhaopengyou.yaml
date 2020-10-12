@@ -6,7 +6,7 @@ scale_by: BOTH
 # for pixel tuples, the order is [X,Y]
 cardpiles:
   - piletype: PublicPile
-    pile_set_tag: residual
+    pile_set_tag: hidden
     display: ALL    
     mat_center: [196, 500]    
     mat_size: [280, 71] 
@@ -17,9 +17,10 @@ cardpiles:
     button_height: 15
     sorting_rule: SORT_BY_SUIT_THEN_NUMBER
     auto_sort_setting: NO_AUTO_SORT
-    enable_sort_button: True
+    enable_sort_button: False
     enable_clear_button: False
     enable_recover_last_removed_cards: False
+    enable_flip_all: True
     title:
       type: SCORE
       default: Hidden
@@ -37,13 +38,14 @@ cardpiles:
     button_height: 15
     sorting_rule: SORT_BY_SUIT_THEN_NUMBER
     auto_sort_setting: AUTO_SORT_ALL_CARDS
-    enable_sort_button: True
+    enable_sort_button: False
     enable_clear_button: False
     enable_recover_last_removed_cards: False
+    enable_flip_all: True
     title:
       type: SCORE
       default: Your Private Pile
-      score_type: CARD_COUNT  
+      score_type: CARD_COUNT        
       
   - piletype: PlayerPile
     pile_set_tag: private
@@ -60,6 +62,7 @@ cardpiles:
     enable_sort_button: True
     enable_clear_button: False
     enable_recover_last_removed_cards: False
+    enable_flip_all: True
     title:
       type: SCORE
       default: Private 2
@@ -86,6 +89,7 @@ cardpiles:
     enable_sort_button: True
     enable_clear_button: True
     enable_recover_last_removed_cards: True
+    enable_flip_all: False
     title:
       type: PLAYER_NAME
       default: '' 
@@ -108,7 +112,8 @@ cardpiles:
     auto_sort_setting: NO_AUTO_SORT
     enable_sort_button: True
     enable_clear_button: False
-    enable_recover_last_removed_cards: False    
+    enable_recover_last_removed_cards: False
+    enable_flip_all: False
     title:
       type: SCORE
       score_type: SCORE_510K
@@ -127,23 +132,53 @@ cardpiles:
     auto_sort_setting: NO_AUTO_SORT
     enable_sort_button: True
     enable_clear_button: False
-    enable_recover_last_removed_cards: False    
+    enable_recover_last_removed_cards: False
+    enable_flip_all: False
     title:
       type: SCORE
       score_type: SCORE_510K
-      default: all cards won
+      default: all cards won    
+  - piletype: CardDeck
+    pile_set_tag: InitialCard
+    display: ALL
+    mat_center: [1000, 500]    
+    mat_size: [50, 71] 
+    mat_boundary: [21, 28.5]
+    card_size: [35, 47.5]
+    card_offset: [0, 0.1]
+    mat_color: [47, 79, 79]  
+    button_width: 50
+    button_height: 15    
+    vertical_button_width: 100
+    vertical_button_height: 14
+    per_deck_cards: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53]
+    #initial_num_of_decks: 0
+    face_down: True
+    num_of_decks_per_generation: CONST_NPLAYER
+    enable_clear_button: True
+    enable_flip_all: False
+    enable_generation: True
+    enable_auto_distribution: True
+    
+    destination_piles_and_cards:
+      hand: 52
+      hidden: CONST_NPLAYER*2      
+    title:
+      type: SCORE
+      score_type: CARD_COUNT
+      default: shufflecards      
 gamebuttons:
   - button: 
     font_size: 12
     bg_color: [139, 0, 0]
     text: "New Game Round"
-    center: [1120, 520]
+    center: [1300, 520]
     size: [200, 30]
     action: initiate_game_restart
   - button: 
     font_size: 12
     bg_color: [139, 0, 0]
     text: "Leave and Reset Game"
-    center: [1120, 480]
+    center: [1300, 480]
     size: [200, 30]
     action: reset_player_and_game    

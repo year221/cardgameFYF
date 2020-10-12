@@ -1,18 +1,25 @@
 """ card piles"""
 import math
 import arcade
-from clientelements import Card, ResizableGameTextLabel,ResizableGameFlatButton
+from clientelements import Card, ResizableGameTextLabel,ResizableGameFlatButton, ResizableUIInputBox,SyncedResizableUIInputBox
 from utils import *
 import gamestate
-from arcade.gui import UIEvent, TEXT_INPUT,UIInputBox
+from gamestate import MAX_DECK_SIZE
+import random
+#from arcade.gui import UIEvent, TEXT_INPUT,UIInputBox
 import copy
 from enum import Enum
 import PIL.Image
 from arcade import Texture
-from arcade.arcade_types import RGB, Point, PointList
+from simpleeval import SimpleEval
+#from arcade.arcade_types import RGB, Point, PointList
 PILE_BUTTON_HEIGHT = 12
 PILE_BUTTON_FONTSIZE = 8
+PILE_BUTTON_WIDTH = 100
 N_ELEMENT_PER_PILE = 4
+
+def height_to_font_size(height):
+    return height/1.6
 
 def calculate_circular_pile_set_positions(starting_mat_center, pile_offset, piles_per_side,
                                           player_index, n_player, pile_position_offset, starting_index_type=None,
@@ -113,14 +120,17 @@ CARD_WIDTH = 140
 CARD_HEIGHT = 190
 
 
+
+
 class CardPile(arcade.SpriteList):
     """ Card sprite """
 
     def __init__(self, card_pile_id, mat_center, mat_size, mat_boundary, card_size, card_offset, mat_color, size_scaler=1,
                  sorting_rule=None,
                  auto_sort_setting=None,
-                 enable_sort_button=True, enable_clear_button=False, enable_recover_last_removed_cards=False,
-                 button_height=None,
+                 enable_sort_button=True, enable_clear_button=False, enable_recover_last_removed_cards=False, enable_flip_all=False,
+                 button_width=None, button_height=None,
+                 vertical_button_width=None, vertical_button_height=None,
                  update_event_handle = None,
                  title_property = None,
                  other_properties=None, *args, **kwargs):
@@ -139,9 +149,23 @@ class CardPile(arcade.SpriteList):
         self._card_offset = card_offset
         self._card_size = card_size
         self._card_scale = min(self._card_size[0]/CARD_WIDTH, self._card_size[1]/CARD_HEIGHT)
+        if button_width is None:
+            self._button_width = self._mat_size[0] / N_ELEMENT_PER_PILE
+        else:
+            self._button_width = button_width
         if button_height is None:
-            button_height = PILE_BUTTON_HEIGHT
-        self._button_height = button_height
+            self._button_height = PILE_BUTTON_HEIGHT
+        else:
+            self._button_height = button_height
+        if vertical_button_height is None:
+            self._vertical_button_height = PILE_BUTTON_HEIGHT
+        else:
+            self._vertical_button_height = vertical_button_height
+        if vertical_button_width is None:
+            self._vertical_button_width = PILE_BUTTON_WIDTH
+        else:
+            self._vertical_button_width = vertical_button_width
+
         # update
         self.mat_center = scale_tuple(self._mat_center, self._size_scaler)
         self.mat_size = scale_tuple(self._mat_size, self._size_scaler)
@@ -151,40 +175,44 @@ class CardPile(arcade.SpriteList):
         self.step_x = round(self._card_offset[0] * self._size_scaler)
         self.step_y = round(self._card_offset[1] * self._size_scaler)
         self.card_scale = self._card_scale*self._size_scaler
-        self.button_height = self._button_height*self._size_scaler
+        #self.button_height = self._button_height*self._size_scaler
 
         self._pile_mat = PileMat(self, round(self.mat_size[0]), round(self.mat_size[1]), mat_color)
         self._pile_mat.position = self.mat_center
-        #self._card_scale_calculated = min(self._card_size[0]*self._normalizing_length/CARD_WIDTH, self._card_size[1]*self._normalizing_length/CARD_HEIGHT)
-        #self.card_scale = card_scale
-        #self.card_size = card_size
-        self.sorting_rule = sorting_rule
-        self.auto_sort_setting = auto_sort_setting
+        if sorting_rule is None:
+            self.sorting_rule=Sorting_Rule.DO_NOT_SORT
+        else:
+            self.sorting_rule = sorting_rule
+        if auto_sort_setting is None:
+            self.auto_sort_setting=Auto_Sort.NO_AUTO_SORT
+        else:
+            self.auto_sort_setting = auto_sort_setting
         self._cached_values = []
         self._cached_face_status = {}
         self.enable_sort_button = enable_sort_button
         self.sort_button = None
         self.enable_clear_button = enable_clear_button
         self.clear_button = None
-        #self.clear_action = clear_action
         self.enable_recover_last_removed_cards = enable_recover_last_removed_cards
         self.recover_button = None
-        #self.recover_action = recover_action
+        self.enable_flip_all = enable_flip_all
+        self.flip_all_button = None
         self._title_label = None
         if title_property is None:
             self._title_property = dict(type = Title_Type.NONE, default='')
         else:
             self._title_property =copy.deepcopy(title_property)
         self._title_property['type'] = Title_Type[self._title_property['type']]
-        #self.enable_title = title_property['type']
         self._title = self._title_property['default']
-        #self._title = '' if title is None else title
         self._update_event_handle = update_event_handle if update_event_handle is not None else lambda x: None
         self._last_removed_card_values = []
         self._last_removed_face_status = {}
         self.other_properties = copy.deepcopy(other_properties)
         self._ui_elements = None
+        self._button_count = 0
+        self._vertical_button_count = 0
         self.setup_ui_elements()
+
 
     @property
     def size_scaler(self):
@@ -202,7 +230,7 @@ class CardPile(arcade.SpriteList):
         self.step_x = round(self._card_offset[0] * self._size_scaler)
         self.step_y = round(self._card_offset[1] * self._size_scaler)
         self.card_scale = self._card_scale*self._size_scaler
-        self.button_height = self._button_height*self._size_scaler
+        #self.button_height = self._button_height*self._size_scaler
 
 
         #self._pile_mat.width = round(self.mat_size[0])
@@ -217,11 +245,15 @@ class CardPile(arcade.SpriteList):
             cardsprite.center_y = cardsprite.center_y * factor
             cardsprite.scale = self.card_scale
 
-
-    def clear(self):
+    def clear(self, cache_cleared_values=True):
         """ clear entire pile"""
-        self._last_removed_card_values = self._cached_values
-        self._last_removed_face_status = self._cached_face_status
+        if cache_cleared_values:
+            self._last_removed_card_values = self._cached_values
+            self._last_removed_face_status = self._cached_face_status
+        else:
+            self._last_removed_card_values=[]
+            self._last_removed_face_status={}
+
         self._cached_values = []
         self._cached_face_status = {}
         while self.__len__() > 0:
@@ -229,19 +261,27 @@ class CardPile(arcade.SpriteList):
 
     def _clear_card(self):
 
-        #if 'Clearable' in pile.other_properties:
-        #    if pile.other_properties['Clearable']:
         new_event = gamestate.Event(
             type='Remove',
             src_pile = self.card_pile_id,
             cards = self.to_valuelist()
         )
         self.clear()
-        #pile.clear()  # remove_card(dropped_card)
         self._update_event_handle(new_event)
 
-        # self.event_buffer.append(new_event)
-        # self.game_state.update_from_event(new_event)
+    def _flip_all_card(self):
+
+        card_update_dict = {}
+        for card in self:
+            new_face = card.face_flipped()
+            card_update_dict[card.value]=new_face#.update({card.value: new_face})
+            card.face = new_face
+        new_event = gamestate.Event(
+            type='Flip',
+            #cards=list(card_update_dict.keys()),
+            cards_status=card_update_dict,
+        )
+        self._update_event_handle(new_event)
 
     def _recover_removed_card(self):
         """ recover previously cleared cards"""
@@ -264,7 +304,6 @@ class CardPile(arcade.SpriteList):
     def mat(self):
         return self._pile_mat
 
-
     @property
     def title(self):
         return self._title
@@ -282,67 +321,74 @@ class CardPile(arcade.SpriteList):
     def title_type(self):
         return self._title_property['type']
 
+    def _add_horizontal_buttons(self, click_event, text):
+        c_button = ResizableGameFlatButton(
+            click_event=click_event,
+            width=self._button_width,
+            height=self._button_height,
+            center_x=self._mat_center[0] - self._mat_size[0] / 2 + (
+                    self._button_width * (self._button_count * 2 + 1) / 2),
+            center_y=self._mat_center[1] + self._mat_size[1] / 2 + self._button_height / 2,
+            size_scaler=self._size_scaler,
+            font_size=height_to_font_size(self._button_height),
+            text=text
+        )
+        self._ui_elements.append(c_button)
+        self._button_count += 1
+        return c_button
+
+    def _add_vertical_buttons(self, click_event, text):
+        c_button = ResizableGameFlatButton(
+            click_event=click_event,
+            width=self._vertical_button_width,
+            height=self._vertical_button_height,
+            center_x=self._mat_center[0] + self._mat_size[0] / 2 + self._vertical_button_width / 2,
+            center_y=self._mat_center[1] + self._mat_size[1] / 2 - (
+                        self._vertical_button_count * 2 + 1) / 2 * self._vertical_button_height,
+            size_scaler=self._size_scaler,
+            font_size=height_to_font_size(self._vertical_button_height),
+            text=text
+        )
+
+        self._ui_elements.append(c_button)
+        self._vertical_button_count += 1
+        return c_button
 
     def setup_ui_elements(self):
         self._ui_elements = []
+        #button_count = 0
         if self._title_property['type'] != Title_Type.NONE:
             if self._title_label is None:
                 self._title_label = ResizableGameTextLabel(
-                    width=(self._mat_size[0] / N_ELEMENT_PER_PILE),
+                    width=self._button_width,
                     height=self._button_height,
                     center_x=self._mat_center[0] - self._mat_size[0] / 2 + (
-                        self._mat_size[0] / N_ELEMENT_PER_PILE / 2),
+                            self._button_width * (self._button_count * 2 + 1) / 2),
                     center_y=self._mat_center[1] + self._mat_size[1] / 2 + self._button_height / 2,
                     text=self._title,
                     size_scaler=self._size_scaler,
-                    font_size=self._button_height/1.5,
+                    font_size=height_to_font_size(self._button_height),
                 )
-            self._ui_elements.append(self._title_label)
+                self._ui_elements.append(self._title_label)
+                self._button_count+=1
 
         if self.enable_sort_button:
             if self.sort_button is None:
-                self.sort_button = ResizableGameFlatButton(
-                    click_event=self.resort_cards,
-                    width=(self._mat_size[0] / N_ELEMENT_PER_PILE),
-                    height=self._button_height,
-                    center_x=self._mat_center[0] - self._mat_size[0] /2 + (
-                        self._mat_size[0] / N_ELEMENT_PER_PILE / 2 * 3),
-                    center_y=self._mat_center[1] + self._mat_size[1] /2 + self._button_height / 2,
-                    size_scaler=self._size_scaler,
-                    font_size=self._button_height/1.5,
-                    text='SORT'
-                )
-            self._ui_elements.append(self.sort_button)
+                self.sort_button= self._add_horizontal_buttons(self.resort_cards, 'SORT')
+
         if self.enable_clear_button:
 
             if self.clear_button is None:
+                self.clear_button = self._add_horizontal_buttons(self._clear_card, 'CLEAR')
 
-                self.clear_button = ResizableGameFlatButton(
-                    click_event=self._clear_card,
-                    width=(self._mat_size[0] / N_ELEMENT_PER_PILE),
-                    height=self._button_height,
-                    center_x=self._mat_center[0] - self._mat_size[0] / 2 + (
-                        self._mat_size[0] / N_ELEMENT_PER_PILE / 2 * 5),
-                    center_y=self._mat_center[1] + self._mat_size[1] / 2 + self._button_height / 2,
-                    size_scaler=self._size_scaler,
-                    font_size=self._button_height/1.5,
-                    text='CLEAR'
-                )
-            self._ui_elements.append(self.clear_button)
         if self.enable_recover_last_removed_cards:
             if self.recover_button is None:
-                self.recover_button = ResizableGameFlatButton(
-                    click_event=self._recover_removed_card,
-                    width=(self._mat_size[0] / N_ELEMENT_PER_PILE),
-                    height=self._button_height,
-                    center_x=self._mat_center[0] - self._mat_size[0] / 2 + (
-                        self._mat_size[0] / N_ELEMENT_PER_PILE / 2 * 7),
-                    center_y=self._mat_center[1] + self._mat_size[1] / 2 + self._button_height / 2,
-                    size_scaler=self._size_scaler,
-                    font_size=self._button_height/1.5,
-                    text='UNDO CLR'
-                )
-            self._ui_elements.append(self.recover_button)
+                self.recover_button = self._add_horizontal_buttons(self._recover_removed_card, 'UNDO CLR')
+
+        if self.enable_flip_all:
+            if self.flip_all_button is None:
+                self.flip_all_button = self._add_horizontal_buttons(self._flip_all_card, 'FLIP ALL')
+
     def get_ui_elements(self):
         return self._ui_elements
 
@@ -372,8 +418,6 @@ class CardPile(arcade.SpriteList):
     def to_face_staus(self):
         """ export as dictionary"""
         return {w.value: w.face for w in self}
-
-
 
     def remove_card(self, card):
         self.remove(card)
@@ -424,17 +468,225 @@ class CardPile(arcade.SpriteList):
                 # AUTO_SORT_NEW_CARD_ONLY = 1
                 # AUTO_SORT_ALL_CARDS = 2
                 if self.auto_sort_setting is None or self.auto_sort_setting == Auto_Sort.NO_AUTO_SORT:
-                    for value in card_values_to_add:
+                    for value in [w for w in value_list if w in card_values_to_add]:
                         self.add_card(Card(value=value, face=face_status_dict[value]))
                 elif self.auto_sort_setting == Auto_Sort.AUTO_SORT_NEW_CARD_ONLY:
                     sorted_card_values = sort_card_value(card_values_to_add, self.sorting_rule)
                     for value in sorted_card_values:
                         self.add_card(Card(value=value, face=face_status_dict[value]))
                 else:
-                    for value in card_values_to_add:
+                    #for value in card_values_to_add:
+                    #    self.add_card(Card(value=value, face=face_status_dict[value]))
+                    for value in [w for w in value_list if w in card_values_to_add]:
                         self.add_card(Card(value=value, face=face_status_dict[value]))
-
         card_added_removed = set.union(card_values_to_remove, card_values_to_add)
         if self.auto_sort_setting == Auto_Sort.AUTO_SORT_ALL_CARDS:
             self.resort_cards()
         return card_added_removed
+
+class CardDeck(CardPile):
+    def __init__(self, card_pile_id, mat_center, mat_size, mat_boundary, card_size, card_offset, mat_color, size_scaler,
+                 update_event_handle,
+                 per_deck_cards, #initial_num_of_decks=None,
+                 face_down=True,
+                 enable_generation=None, num_of_decks_per_generation=1,
+                 enable_auto_distribution=None, destination_piles_and_cards=None, title_property=None,other_properties=None,
+                 *args, **kwargs
+                 ):
+        super().__init__(card_pile_id, mat_center, mat_size, mat_boundary, card_size, card_offset, mat_color, size_scaler,
+                         sorting_rule=None, auto_sort_setting=None, enable_sort_button=False,
+                         enable_recover_last_removed_cards=False,
+                         update_event_handle=update_event_handle,
+                         title_property=title_property,
+                         other_properties=other_properties,
+                         *args, **kwargs)
+        self._simple_eval = SimpleEval()
+        self.enable_auto_distribution = enable_auto_distribution
+        self._destination_piles_and_cards=destination_piles_and_cards
+        self._ui_destination_piles_and_cards = {}
+        self.per_deck_cards=per_deck_cards
+        #self.initial_num_of_decks=initial_num_of_decks
+        self._enable_generation = enable_generation
+        self._num_of_decks_per_generation = num_of_decks_per_generation
+        self._ui_num_of_decks_per_generation = None
+        self._enable_auto_distribution = enable_auto_distribution
+        self._per_deck_cards = per_deck_cards
+        self.face_down=face_down
+        self._generation_button = None
+        self._auto_distribution_button = None
+        self.setup_vertical_ui_elements()
+
+    @property
+    def num_of_decks_per_generation(self):
+        if self._ui_num_of_decks_per_generation is None:
+            return None
+        else:
+            c_value = self._ui_num_of_decks_per_generation.text
+            if not c_value.isdigit():
+                return None
+            else:
+                return int(c_value)
+    @num_of_decks_per_generation.setter
+    def num_of_decks_per_generation(self, value):
+        if value is not None:
+            #if self._ui_num_of_decks_per_generation.text!=str(value):
+            self._ui_num_of_decks_per_generation.sync_text(str(value))
+
+    @property
+    def destination_piles_and_cards(self):
+        output_dict = {}
+        for key, ui_input in self._ui_destination_piles_and_cards.items():
+            c_value = ui_input.text
+            if not c_value.isdigit():
+                return None
+            else:
+                output_dict[key]=int(c_value)
+        return output_dict
+    @destination_piles_and_cards.setter
+    def destination_piles_and_cards(self, value: dict):
+        for key, val in value.items():
+            #c_value =self._ui_destination_piles_and_cards[key].text
+            #if c_value != str(val):
+            self._ui_destination_piles_and_cards[key].sync_text(str(val))
+
+    def update_ui_property(self, ui_property):
+        if 'num_of_decks_per_generation' in ui_property:
+            self.num_of_decks_per_generation = ui_property['num_of_decks_per_generation']
+        if 'destination_piles_and_cards' in ui_property:
+            self.destination_piles_and_cards = ui_property['destination_piles_and_cards']
+
+    def deal_cards(self):
+        if 'pile_tag_to_pile_id' in self.other_properties:
+            card_values = self.to_valuelist()
+            destination_piles_and_cards = self.destination_piles_and_cards
+            if destination_piles_and_cards is not None:
+                all_cards_to_distribute_count = sum([len(self.other_properties['pile_tag_to_pile_id'][key])*self._eval_expression(val) for key, val in destination_piles_and_cards.items()])
+                if all_cards_to_distribute_count<=len(card_values):
+                    starting_index = 0
+                    for key, val in destination_piles_and_cards.items():
+                        n_cards = self._eval_expression(val)
+                        for card_pile_id in self.other_properties['pile_tag_to_pile_id'][key]:
+                            new_event = gamestate.Event(
+                                type='Move',
+                                src_pile=self.card_pile_id,
+                                dst_pile=card_pile_id,
+                                cards=card_values[starting_index:starting_index+n_cards]
+                            )
+                            self._update_event_handle(new_event, local_fast_update=False)
+                            starting_index+=n_cards
+
+    def _eval_expression(self, x):
+        if isinstance(x, str):
+            temp_str = x
+            for key, val in self.other_properties['constants'].items():
+                temp_str = temp_str.replace(key, str(val))
+            return self._simple_eval.eval(temp_str)
+        else:
+            return x
+    def generate_cards(self):
+        """ Send gnerate new cards event
+
+        :return:
+        """
+
+        random.seed(a=None)
+        n_deck_per_generation = self.num_of_decks_per_generation
+        if n_deck_per_generation is not None:
+            new_cards = [j*MAX_DECK_SIZE + w for j in range(n_deck_per_generation) for w in self.per_deck_cards]
+            face_value = 'D' if self.face_down else 'U'
+            card_status = {w: face_value for w in new_cards}
+            random.shuffle(new_cards)
+            new_event = gamestate.EventAddNewCards(
+                type='AddNewCards',
+                dst_pile = self.card_pile_id,
+                cards= new_cards,
+                cards_status= card_status
+            )
+            self._update_event_handle(new_event, local_fast_update=False)
+
+
+
+    def _on_change_num_of_decks_per_generation(self, value):
+        num_of_decks_per_generation = self.num_of_decks_per_generation
+        if num_of_decks_per_generation is not None:
+            new_event = gamestate.Event(
+                type='UIElementChange',
+                dst_pile=self.card_pile_id,
+                property={'num_of_decks_per_generation':num_of_decks_per_generation}
+            )
+            self._update_event_handle(new_event, local_fast_update=False)
+
+    def _on_change_destination_piles_and_cards(self, value):
+        destination_piles_and_cards = self.destination_piles_and_cards
+        if destination_piles_and_cards is not None:
+            new_event = gamestate.Event(
+                type='UIElementChange',
+                dst_pile=self.card_pile_id,
+                property={'destination_piles_and_cards':destination_piles_and_cards}
+            )
+            self._update_event_handle(new_event, local_fast_update=False)
+
+    def setup_vertical_ui_elements(self):
+        #num_vertical_button = 0
+        if self._enable_generation:
+            if self._generation_button is None:
+                text_label = ResizableGameTextLabel(
+                    width=self._vertical_button_width / 2,
+                    height=self._vertical_button_height,
+                    center_x=self._mat_center[0] + self._mat_size[0] / 2 + self._vertical_button_width / 4,
+                    center_y=self._mat_center[1] + self._mat_size[1] / 2 - (
+                            self._vertical_button_count * 2 + 1) / 2 * self._vertical_button_height,
+                    size_scaler=self._size_scaler,
+                    font_size=height_to_font_size(self._vertical_button_height),
+                    text=str('#decks')
+                )
+                c_text_input = SyncedResizableUIInputBox(
+                    width=self._vertical_button_width / 2,
+                    height=self._vertical_button_height,
+                    center_x=self._mat_center[0] + self._mat_size[0] / 2 + self._vertical_button_width / 4 * 3,
+                    center_y=self._mat_center[1] + self._mat_size[1] / 2 - (
+                            self._vertical_button_count * 2 + 1) / 2 * self._vertical_button_height,
+                    size_scaler=self._size_scaler,
+                    font_size=height_to_font_size(self._vertical_button_height),
+                    text=str(self._eval_expression(self._num_of_decks_per_generation)),
+                    on_text_update_hanlder=self._on_change_num_of_decks_per_generation
+                )
+                self._ui_num_of_decks_per_generation = c_text_input
+                self._vertical_button_count += 1
+                self._ui_elements.append(text_label)
+                self._ui_elements.append(c_text_input)
+
+                self._generation_button = self._add_vertical_buttons(self.generate_cards, 'GENERATE')
+
+
+
+        if self._enable_auto_distribution:
+            if self._auto_distribution_button is None:
+                for key, val in self._destination_piles_and_cards.items():
+                    text_label = ResizableGameTextLabel(
+                        width=self._vertical_button_width/2,
+                        height=self._vertical_button_height,
+                        center_x=self._mat_center[0] + self._mat_size[0] / 2 + self._vertical_button_width / 4,
+                        center_y=self._mat_center[1] + self._mat_size[1] / 2 - (
+                                self._vertical_button_count * 2 + 1) / 2 * self._vertical_button_height,
+                        size_scaler=self._size_scaler,
+                        font_size=height_to_font_size(self._vertical_button_height),
+                        text=str(key)
+                    )
+
+                    c_text_input = SyncedResizableUIInputBox(
+                        width=self._vertical_button_width/2,
+                        height=self._vertical_button_height,
+                        center_x=self._mat_center[0] + self._mat_size[0] / 2 + self._vertical_button_width / 4 * 3,
+                        center_y=self._mat_center[1] + self._mat_size[1] / 2 - (
+                                self._vertical_button_count * 2 + 1) / 2 * self._vertical_button_height,
+                        size_scaler=self._size_scaler,
+                        font_size=height_to_font_size(self._vertical_button_height),
+                        text=str(self._eval_expression(val)),
+                        on_text_update_hanlder=self._on_change_destination_piles_and_cards
+                    )
+                    self._ui_destination_piles_and_cards[key]=c_text_input
+                    self._vertical_button_count+=1
+                    self._ui_elements.append(text_label)
+                    self._ui_elements.append(c_text_input)
+                self._auto_distribution_button = self._add_vertical_buttons(self.deal_cards, 'DEAL')

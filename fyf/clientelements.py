@@ -139,20 +139,20 @@ class ResizableGameFlatButton(GameFlatButton):
     To capture a button click, subclass the button and override on_click.
     """
     def __init__(self, click_event, width, height, center_x, center_y, size_scaler=1, font_size=None, bg_color=None, *arg, **kargs):
-        self._basic_width = width
-        self._basic_height = height
-        self._center_x = center_x
-        self._center_y = center_y
-        self._font_size = font_size
+        self._base_width = width
+        self._base_height = height
+        self._base_enter_x = center_x
+        self._base_center_y = center_y
+        self._base_font_size = font_size
         self._size_scaler = size_scaler
         super().__init__(click_event=click_event,
                          font_size=round(font_size*self._size_scaler) if font_size is not None else None,
                          bg_color=bg_color,
-                         width=round(self._basic_width*self._size_scaler), height=round(self._basic_height*self._size_scaler),
-                         center_x=round(self._center_x*self._size_scaler), center_y=round(self._center_y*self._size_scaler),
+                         width=round(self._base_width*self._size_scaler), height=round(self._base_height*self._size_scaler),
+                         center_x=round(self._base_enter_x*self._size_scaler), center_y=round(self._base_center_y*self._size_scaler),
                          *arg, **kargs)
         if font_size is None:
-            self._font_size = self.style_attr('font_size', 12)/self._size_scaler
+            self._base_font_size = self.style_attr('font_size', 12)/self._size_scaler
 
     @property
     def size_scaler(self):
@@ -160,11 +160,11 @@ class ResizableGameFlatButton(GameFlatButton):
     @size_scaler.setter
     def size_scaler(self, x):
         self._size_scaler = x
-        self.width = round(self._basic_width * self._size_scaler)
-        self.height = round(self._basic_height * self._size_scaler)
-        self.center_x = round(self._center_x * self._size_scaler)
-        self.center_y = round(self._center_y * self._size_scaler)
-        self.set_style_attrs(font_size=round(self._font_size * self._size_scaler))
+        self.width = round(self._base_width * self._size_scaler)
+        self.height = round(self._base_height * self._size_scaler)
+        self.center_x = round(self._base_enter_x * self._size_scaler)
+        self.center_y = round(self._base_center_y * self._size_scaler)
+        self.set_style_attrs(font_size=round(self._base_font_size * self._size_scaler))
 
     def on_click(self):
         """ Called when user lets off button """
@@ -181,26 +181,28 @@ class GameTextLabel(gui.UILabel):
             self.set_style_attrs(font_size=font_size)
         self.set_style_attrs(font_color=arcade.color.GOLD)
 
-class ResizableGameTextLabel(GameTextLabel):
+class ResizableGameTextLabel(gui.UILabel):
     """
     To capture a button click, subclass the button and override on_click.
     """
     def __init__(self,  width, height, center_x, center_y, size_scaler=1, font_size=None, *arg, **kargs):
-        self._width = width
-        self._height = height
-        self._center_x = center_x
-        self._center_y = center_y
-        self._font_size = font_size
+        self._base_width = width
+        self._base_height = height
+        self._base_center_x = center_x
+        self._base_center_y = center_y
+        self._base_font_size = font_size
         self._size_scaler = size_scaler
 
-        super().__init__(font_size=round(font_size*self._size_scaler) if font_size is not None else None,
-                         width=round(self._width*self._size_scaler),
-                         center_x=round(self._center_x*self._size_scaler),
-                         center_y=round(self._center_y*self._size_scaler),
+        super().__init__(width=round(self._base_width*self._size_scaler),
+                         center_x=round(self._base_center_x*self._size_scaler),
+                         center_y=round(self._base_center_y*self._size_scaler),
                          *arg, **kargs)
-
+        self.set_style_attrs(font_color=arcade.color.GOLD)
         if font_size is None:
-            self._font_size = self.style_attr('font_size', 12)/self._size_scaler
+            self._base_font_size = self.style_attr('font_size', 12)/self._size_scaler
+        else:
+            self.set_style_attrs(font_size=round(font_size * self._size_scaler))
+
     @property
     def size_scaler(self):
         return self._size_scaler
@@ -209,6 +211,79 @@ class ResizableGameTextLabel(GameTextLabel):
         self._size_scaler = x
         #self.width = round(self._width*self._size_scaler)
         #self.height = round(self._height * self._size_scaler)
-        self.center_x = round(self._center_x * self._size_scaler)
-        self.center_y = round(self._center_y * self._size_scaler)
-        self.set_style_attrs(font_size=round(self._font_size * self._size_scaler))
+        self.center_x = round(self._base_center_x * self._size_scaler)
+        self.center_y = round(self._base_center_y * self._size_scaler)
+        self._target_width = round(self._base_width*self._size_scaler)
+        self.set_style_attrs(font_size=round(self._base_font_size * self._size_scaler))
+
+class ResizableUIInputBox(gui.UIInputBox):
+    """
+    To capture a button click, subclass the button and override on_click.
+    """
+    def __init__(self,  width, height, center_x, center_y, size_scaler=1, font_size=None, *arg, **kargs):
+        self._base_width = width
+        self._base_height = height
+        self._base_center_x = center_x
+        self._base_center_y = center_y
+        self._base_font_size = font_size
+        self._size_scaler = size_scaler
+        #* self._size_scaler) if font_size is not None else None
+        super().__init__(width=round(self._base_width*self._size_scaler),
+                         height=round(self._base_height*self._size_scaler),
+                         center_x=round(self._base_center_x*self._size_scaler),
+                         center_y=round(self._base_center_y*self._size_scaler),
+                         *arg, **kargs)
+        self.set_style_attrs(border_width=0, margin_left=0, vmargin=0, border_color=arcade.color.GRAY)
+        if font_size is not None:
+            self.set_style_attrs(font_size=font_size * self._size_scaler)
+        else:
+            self._base_font_size = self.style_attr('font_size', 12)/self._size_scaler
+    @property
+    def size_scaler(self):
+        return self._size_scaler
+    @size_scaler.setter
+    def size_scaler(self, x):
+        self._size_scaler = x
+        self.width = round(self._base_width*self._size_scaler)
+        self.height = round(self._base_height * self._size_scaler)
+        self.center_x = round(self._base_center_x * self._size_scaler)
+        self.center_y = round(self._base_center_y * self._size_scaler)
+        self.set_style_attrs(font_size=round(self._base_font_size * self._size_scaler))
+        self.render()
+
+class SyncedResizableUIInputBox(ResizableUIInputBox):
+    def __init__(self,  width, height, center_x, center_y, size_scaler=1, font_size=None, on_text_update_hanlder=None, *arg, **kargs):
+
+        self._on_text_update_hanlder = on_text_update_hanlder
+        super().__init__(width, height, center_x, center_y, size_scaler=size_scaler, font_size=font_size, *arg, **kargs)
+        self._previous_updated_text = self.text
+        self._text_to_reject_from_sync = self.text
+
+
+    def sync_text(self, value):
+        if not self.focused:
+            if self.text != value:
+                if self._text_to_reject_from_sync!=value:
+                    self.text = value
+                    self._previous_updated_text = value
+                    self._text_to_reject_from_sync = value
+
+    def _on_text_update(self):
+        if self.text != self._previous_updated_text:
+            if self._on_text_update_hanlder is not None:
+                self._on_text_update_hanlder(self.text)
+            self._just_updated=True
+            self._text_to_reject_from_sync = self._previous_updated_text
+            self._previous_updated_text= self.text
+
+
+    def on_unfocus(self):
+        super().on_unfocus()
+        self._on_text_update()
+    def on_ui_event(self, event: gui.UIEvent):
+        # redefine on_ui_event to trigger a handler
+        super().on_ui_event(event)
+        if self.focused:
+            if event.type == gui.TEXT_INPUT and event.get('text') == '\r':
+                self._on_text_update()
+                return
