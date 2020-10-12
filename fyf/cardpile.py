@@ -274,7 +274,7 @@ class CardPile(arcade.SpriteList):
         card_update_dict = {}
         for card in self:
             new_face = card.face_flipped()
-            card_update_dict.update({card.value: new_face})
+            card_update_dict[card.value]=new_face#.update({card.value: new_face})
             card.face = new_face
         new_event = gamestate.Event(
             type='Flip',
