@@ -6,7 +6,7 @@ scale_by: BOTH
 # for pixel tuples, the order is [X,Y]
 cardpiles:
   - piletype: PublicPile
-    pile_set_tag: hiddenpile
+    pile_set_tag: hidden
     display: ALL    
     mat_center: [196, 500]    
     mat_size: [280, 71] 
@@ -162,7 +162,7 @@ cardpiles:
     
     destination_piles_and_cards:
       hand: 52
-      hiddenpile: CONST_NPLAYER*2      
+      hidden: CONST_NPLAYER*2      
     title:
       type: SCORE
       score_type: CARD_COUNT
