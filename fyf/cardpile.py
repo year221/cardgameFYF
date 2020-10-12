@@ -278,7 +278,7 @@ class CardPile(arcade.SpriteList):
             card.face = new_face
         new_event = gamestate.Event(
             type='Flip',
-            cards=list(card_update_dict.keys()),
+            #cards=list(card_update_dict.keys()),
             cards_status=card_update_dict,
         )
         self._update_event_handle(new_event)
