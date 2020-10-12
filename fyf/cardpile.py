@@ -18,6 +18,9 @@ PILE_BUTTON_FONTSIZE = 8
 PILE_BUTTON_WIDTH = 100
 N_ELEMENT_PER_PILE = 4
 
+def height_to_font_size(height):
+    return height/1.6
+
 def calculate_circular_pile_set_positions(starting_mat_center, pile_offset, piles_per_side,
                                           player_index, n_player, pile_position_offset, starting_index_type=None,
                                           self_player_index=None, counterclockwise=True):
@@ -327,7 +330,7 @@ class CardPile(arcade.SpriteList):
                     self._button_width * (self._button_count * 2 + 1) / 2),
             center_y=self._mat_center[1] + self._mat_size[1] / 2 + self._button_height / 2,
             size_scaler=self._size_scaler,
-            font_size=self._button_height / 1.5,
+            font_size=height_to_font_size(self._button_height),
             text=text
         )
         self._ui_elements.append(c_button)
@@ -343,7 +346,7 @@ class CardPile(arcade.SpriteList):
             center_y=self._mat_center[1] + self._mat_size[1] / 2 - (
                         self._vertical_button_count * 2 + 1) / 2 * self._vertical_button_height,
             size_scaler=self._size_scaler,
-            font_size=self._vertical_button_height / 1.5,
+            font_size=height_to_font_size(self._vertical_button_height),
             text=text
         )
 
@@ -357,14 +360,14 @@ class CardPile(arcade.SpriteList):
         if self._title_property['type'] != Title_Type.NONE:
             if self._title_label is None:
                 self._title_label = ResizableGameTextLabel(
-                    width=(self._mat_size[0] / N_ELEMENT_PER_PILE),
+                    width=self._button_width,
                     height=self._button_height,
                     center_x=self._mat_center[0] - self._mat_size[0] / 2 + (
-                        self._mat_size[0] / N_ELEMENT_PER_PILE * (self._button_count*2+1) /2),
+                            self._button_width * (self._button_count * 2 + 1) / 2),
                     center_y=self._mat_center[1] + self._mat_size[1] / 2 + self._button_height / 2,
                     text=self._title,
                     size_scaler=self._size_scaler,
-                    font_size=self._button_height/1.5,
+                    font_size=height_to_font_size(self._button_height),
                 )
                 self._ui_elements.append(self._title_label)
                 self._button_count+=1
@@ -497,38 +500,62 @@ class CardDeck(CardPile):
                          title_property=title_property,
                          other_properties=other_properties,
                          *args, **kwargs)
-
+        self._simple_eval = SimpleEval()
         self.enable_auto_distribution = enable_auto_distribution
-        self.destination_piles_and_cards=destination_piles_and_cards
+        self._destination_piles_and_cards=destination_piles_and_cards
+        self._ui_destination_piles_and_cards = {}
         self.per_deck_cards=per_deck_cards
         #self.initial_num_of_decks=initial_num_of_decks
         self._enable_generation = enable_generation
-        self.num_of_decks_per_generation = num_of_decks_per_generation
+        self._num_of_decks_per_generation = num_of_decks_per_generation
+        self._ui_num_of_decks_per_generation = None
         self._enable_auto_distribution = enable_auto_distribution
         self._per_deck_cards = per_deck_cards
         self.face_down=face_down
         self._generation_button = None
         self._auto_distribution_button = None
         self.setup_vertical_ui_elements()
-        self._simple_eval = SimpleEval()
+
+    @property
+    def num_of_decks_per_generation(self):
+        if self._ui_num_of_decks_per_generation is None:
+            return 0
+        else:
+            c_value = self._ui_num_of_decks_per_generation.text
+            if not c_value.isdigit():
+                return 0
+            else:
+                return int(c_value)
+    @property
+    def destination_piles_and_cards(self):
+        output_dict = {}
+        for key, ui_input in self._ui_destination_piles_and_cards.items():
+            c_value = ui_input.text
+            if not c_value.isdigit():
+                return None
+            else:
+                output_dict[key]=int(c_value)
+        return output_dict
 
     def deal_cards(self):
         if 'pile_tag_to_pile_id' in self.other_properties:
             card_values = self.to_valuelist()
-            all_cards_to_distribute_count = sum([len(self.other_properties['pile_tag_to_pile_id'][key])*self._eval_expression(val) for key, val in self.destination_piles_and_cards.items()])
-            if all_cards_to_distribute_count<=len(card_values):
-                starting_index = 0
-                for key, val in self.destination_piles_and_cards.items():
-                    n_cards = self._eval_expression(val)
-                    for card_pile_id in self.other_properties['pile_tag_to_pile_id'][key]:
-                        new_event = gamestate.Event(
-                            type='Move',
-                            src_pile=self.card_pile_id,
-                            dst_pile=card_pile_id,
-                            cards=card_values[starting_index:starting_index+n_cards]
-                        )
-                        self._update_event_handle(new_event, local_fast_update=False)
-                        starting_index+=n_cards
+            destination_piles_and_cards = self.destination_piles_and_cards
+            if destination_piles_and_cards is not None:
+                all_cards_to_distribute_count = sum([len(self.other_properties['pile_tag_to_pile_id'][key])*self._eval_expression(val) for key, val in destination_piles_and_cards.items()])
+                if all_cards_to_distribute_count<=len(card_values):
+                    starting_index = 0
+                    for key, val in destination_piles_and_cards.items():
+                        n_cards = self._eval_expression(val)
+                        for card_pile_id in self.other_properties['pile_tag_to_pile_id'][key]:
+                            new_event = gamestate.Event(
+                                type='Move',
+                                src_pile=self.card_pile_id,
+                                dst_pile=card_pile_id,
+                                cards=card_values[starting_index:starting_index+n_cards]
+                            )
+                            self._update_event_handle(new_event, local_fast_update=False)
+                            starting_index+=n_cards
 
     def _eval_expression(self, x):
         if isinstance(x, str):
@@ -563,23 +590,61 @@ class CardDeck(CardPile):
         #num_vertical_button = 0
         if self._enable_generation:
             if self._generation_button is None:
+                text_label = ResizableGameTextLabel(
+                    width=self._vertical_button_width / 2,
+                    height=self._vertical_button_height,
+                    center_x=self._mat_center[0] + self._mat_size[0] / 2 + self._vertical_button_width / 4,
+                    center_y=self._mat_center[1] + self._mat_size[1] / 2 - (
+                            self._vertical_button_count * 2 + 1) / 2 * self._vertical_button_height,
+                    size_scaler=self._size_scaler,
+                    font_size=self._vertical_button_height / 1.5,
+                    text=str('#decks')
+                )
+                c_text_input = ResizableUIInputBox(
+                    width=self._vertical_button_width / 2,
+                    height=self._vertical_button_height,
+                    center_x=self._mat_center[0] + self._mat_size[0] / 2 + self._vertical_button_width / 4 * 3,
+                    center_y=self._mat_center[1] + self._mat_size[1] / 2 - (
+                            self._vertical_button_count * 2 + 1) / 2 * self._vertical_button_height,
+                    size_scaler=self._size_scaler,
+                    font_size=self._vertical_button_height / 1.5,
+                    text=str(self._eval_expression(self._num_of_decks_per_generation))
+                )
+                self._ui_num_of_decks_per_generation = c_text_input
+                self._vertical_button_count += 1
+                self._ui_elements.append(text_label)
+                self._ui_elements.append(c_text_input)
+
                 self._generation_button = self._add_vertical_buttons(self.generate_cards, 'GENERATE')
 
 
 
         if self._enable_auto_distribution:
             if self._auto_distribution_button is None:
+                for key, val in self._destination_piles_and_cards.items():
+                    text_label = ResizableGameTextLabel(
+                        width=self._vertical_button_width/2,
+                        height=self._vertical_button_height,
+                        center_x=self._mat_center[0] + self._mat_size[0] / 2 + self._vertical_button_width / 4,
+                        center_y=self._mat_center[1] + self._mat_size[1] / 2 - (
+                                self._vertical_button_count * 2 + 1) / 2 * self._vertical_button_height,
+                        size_scaler=self._size_scaler,
+                        font_size=self._vertical_button_height / 1.5,
+                        text=str(key)
+                    )
 
-                c_text_input = ResizableUIInputBox(
-                    width=self._vertical_button_width,
-                    height=self._vertical_button_height,
-                    center_x=self._mat_center[0] + self._mat_size[0] / 2 + self._vertical_button_width / 2,
-                    center_y=self._mat_center[1] + self._mat_size[1] / 2 - (
-                            self._vertical_button_count * 2 + 1) / 2 * self._vertical_button_height,
-                    size_scaler=self._size_scaler,
-                    font_size=self._vertical_button_height / 1.5,
-                    text='a'
-                )
-                self._vertical_button_count+=1
-                self._ui_elements.append(c_text_input)
+                    c_text_input = ResizableUIInputBox(
+                        width=self._vertical_button_width/2,
+                        height=self._vertical_button_height,
+                        center_x=self._mat_center[0] + self._mat_size[0] / 2 + self._vertical_button_width / 4 * 3,
+                        center_y=self._mat_center[1] + self._mat_size[1] / 2 - (
+                                self._vertical_button_count * 2 + 1) / 2 * self._vertical_button_height,
+                        size_scaler=self._size_scaler,
+                        font_size=self._vertical_button_height / 1.5,
+                        text=str(self._eval_expression(val))
+                    )
+                    self._ui_destination_piles_and_cards[key]=c_text_input
+                    self._vertical_button_count+=1
+                    self._ui_elements.append(text_label)
+                    self._ui_elements.append(c_text_input)
                 self._auto_distribution_button = self._add_vertical_buttons(self.deal_cards, 'DEAL')
