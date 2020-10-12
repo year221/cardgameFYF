@@ -541,6 +541,8 @@ class GameView(arcade.View):
                 self.clear_all_piles()
             held_cards_value = [w.value for w in self.held_cards]
             active_cards_value = [w.value for w in self.active_cards]
+
+            print(self.game_state.pile_property)
             # update piles
             for w in self.card_pile_list:
                 if w.card_pile_id not in self.game_state.cards_in_pile:
@@ -581,6 +583,9 @@ class GameView(arcade.View):
                         if w.title != str(scores):
                             if w.title.isdigit() or scores>0:
                                 w.title = str(scores)
+
+                if w.card_pile_id in self.game_state.pile_property:
+                    w.update_ui_property(self.game_state.pile_property[w.card_pile_id])
 
     def on_draw(self):
         """ Render the screen. """

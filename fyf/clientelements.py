@@ -257,23 +257,25 @@ class SyncedResizableUIInputBox(ResizableUIInputBox):
         self._on_text_update_hanlder = on_text_update_hanlder
         super().__init__(width, height, center_x, center_y, size_scaler=size_scaler, font_size=font_size, *arg, **kargs)
         self._previous_updated_text = self.text
+        self._text_to_reject_from_sync = self.text
 
-    @property
-    def text(self):
-        """
-        Stored text
-        """
-        return super().text
-    @text.setter
-    def text(self, value):
-        super(ResizableUIInputBox, ResizableUIInputBox).text.__set__(self, value)
-        self._previous_updated_text = value
+
+    def sync_text(self, value):
+        if not self.focused:
+            if self.text != value:
+                if self._text_to_reject_from_sync!=value:
+                    self.text = value
+                    self._previous_updated_text = value
+                    self._text_to_reject_from_sync = value
 
     def _on_text_update(self):
         if self.text != self._previous_updated_text:
             if self._on_text_update_hanlder is not None:
                 self._on_text_update_hanlder(self.text)
-            self._previous_updated_text = self.text
+            self._just_updated=True
+            self._text_to_reject_from_sync = self._previous_updated_text
+            self._previous_updated_text= self.text
+
 
     def on_unfocus(self):
         super().on_unfocus()

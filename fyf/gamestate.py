@@ -17,7 +17,7 @@ class GameState:
     n_pile: int = 0
     cards_in_pile: Dict[int, List[int]] = field(default_factory=dict)
     cards_status : Dict[int, str] = field(default_factory=dict)
-    pile_status : Dict[int, Dict] = field(default_factory=dict)
+    pile_property: Dict[int, Dict] = field(default_factory=dict)
     n_player: int = 0
     player_index_per_id: Dict[str, int] = field(default_factory=dict)
     player_name: Dict[str, str] = field(default_factory=dict)
@@ -134,6 +134,7 @@ class GameState:
             self.cards_status = {}
             n_cards_distributed = 0
             self.cards_in_pile = {}
+            self.pile_property = {}
             self.status = 'Wait for Player to Join'
             return [copy.deepcopy(self)]
         elif event.type == 'PlayerReady':
@@ -168,6 +169,11 @@ class GameState:
                     # self.player_name = {index_val: self.player_name_per_id[player_id] for player_id, index_val in self.player_index_per_id.items() if index_val >0}
                     # self.n_player = len(all_non_zero_ids)
                     # self.status = 'Starting New Game'
+            return [copy.deepcopy(self)]
+        elif event.type =='UIElementChange':
+            if event.dst_pile not in self.pile_property:
+                self.pile_property.update({event.dst_pile:{}})
+            self.pile_property[event.dst_pile].update(event.property)
             return [copy.deepcopy(self)]
 
 
@@ -221,5 +227,6 @@ class Event:
     #face_down_pile : List[int] = field(default_factory=list)
     player_name : str = ''
     player_id : str = ''
+    property: Dict = field(default_factory=dict)
 
 

@@ -1,7 +1,7 @@
 """ card piles"""
 import math
 import arcade
-from clientelements import Card, ResizableGameTextLabel,ResizableGameFlatButton, ResizableUIInputBox
+from clientelements import Card, ResizableGameTextLabel,ResizableGameFlatButton, ResizableUIInputBox,SyncedResizableUIInputBox
 from utils import *
 import gamestate
 from gamestate import MAX_DECK_SIZE
@@ -519,13 +519,19 @@ class CardDeck(CardPile):
     @property
     def num_of_decks_per_generation(self):
         if self._ui_num_of_decks_per_generation is None:
-            return 0
+            return None
         else:
             c_value = self._ui_num_of_decks_per_generation.text
             if not c_value.isdigit():
-                return 0
+                return None
             else:
                 return int(c_value)
+    @num_of_decks_per_generation.setter
+    def num_of_decks_per_generation(self, value):
+        if value is not None:
+            #if self._ui_num_of_decks_per_generation.text!=str(value):
+            self._ui_num_of_decks_per_generation.sync_text(str(value))
+
     @property
     def destination_piles_and_cards(self):
         output_dict = {}
@@ -536,6 +542,18 @@ class CardDeck(CardPile):
             else:
                 output_dict[key]=int(c_value)
         return output_dict
+    @destination_piles_and_cards.setter
+    def destination_piles_and_cards(self, value: dict):
+        for key, val in value.items():
+            #c_value =self._ui_destination_piles_and_cards[key].text
+            #if c_value != str(val):
+            self._ui_destination_piles_and_cards[key].sync_text(str(val))
+
+    def update_ui_property(self, ui_property):
+        if 'num_of_decks_per_generation' in ui_property:
+            self.num_of_decks_per_generation = ui_property['num_of_decks_per_generation']
+        if 'destination_piles_and_cards' in ui_property:
+            self.destination_piles_and_cards = ui_property['destination_piles_and_cards']
 
     def deal_cards(self):
         if 'pile_tag_to_pile_id' in self.other_properties:
@@ -572,19 +590,41 @@ class CardDeck(CardPile):
         """
 
         random.seed(a=None)
-        n_deck_per_generation = self._eval_expression(self.num_of_decks_per_generation)
-        new_cards = [j*MAX_DECK_SIZE + w for j in range(n_deck_per_generation) for w in self.per_deck_cards]
-        face_value = 'D' if self.face_down else 'U'
-        card_status = {w: face_value for w in new_cards}
-        random.shuffle(new_cards)
-        new_event = gamestate.EventAddNewCards(
-            type='AddNewCards',
-            dst_pile = self.card_pile_id,
-            cards= new_cards,
-            cards_status= card_status
-        )
-        self._update_event_handle(new_event, local_fast_update=False)
+        n_deck_per_generation = self.num_of_decks_per_generation
+        if n_deck_per_generation is not None:
+            new_cards = [j*MAX_DECK_SIZE + w for j in range(n_deck_per_generation) for w in self.per_deck_cards]
+            face_value = 'D' if self.face_down else 'U'
+            card_status = {w: face_value for w in new_cards}
+            random.shuffle(new_cards)
+            new_event = gamestate.EventAddNewCards(
+                type='AddNewCards',
+                dst_pile = self.card_pile_id,
+                cards= new_cards,
+                cards_status= card_status
+            )
+            self._update_event_handle(new_event, local_fast_update=False)
 
+
+
+    def _on_change_num_of_decks_per_generation(self, value):
+        num_of_decks_per_generation = self.num_of_decks_per_generation
+        if num_of_decks_per_generation is not None:
+            new_event = gamestate.Event(
+                type='UIElementChange',
+                dst_pile=self.card_pile_id,
+                property={'num_of_decks_per_generation':num_of_decks_per_generation}
+            )
+            self._update_event_handle(new_event, local_fast_update=False)
+
+    def _on_change_destination_piles_and_cards(self, value):
+        destination_piles_and_cards = self.destination_piles_and_cards
+        if destination_piles_and_cards is not None:
+            new_event = gamestate.Event(
+                type='UIElementChange',
+                dst_pile=self.card_pile_id,
+                property={'destination_piles_and_cards':destination_piles_and_cards}
+            )
+            self._update_event_handle(new_event, local_fast_update=False)
 
     def setup_vertical_ui_elements(self):
         #num_vertical_button = 0
@@ -597,18 +637,19 @@ class CardDeck(CardPile):
                     center_y=self._mat_center[1] + self._mat_size[1] / 2 - (
                             self._vertical_button_count * 2 + 1) / 2 * self._vertical_button_height,
                     size_scaler=self._size_scaler,
-                    font_size=self._vertical_button_height / 1.5,
+                    font_size=height_to_font_size(self._vertical_button_height),
                     text=str('#decks')
                 )
-                c_text_input = ResizableUIInputBox(
+                c_text_input = SyncedResizableUIInputBox(
                     width=self._vertical_button_width / 2,
                     height=self._vertical_button_height,
                     center_x=self._mat_center[0] + self._mat_size[0] / 2 + self._vertical_button_width / 4 * 3,
                     center_y=self._mat_center[1] + self._mat_size[1] / 2 - (
                             self._vertical_button_count * 2 + 1) / 2 * self._vertical_button_height,
                     size_scaler=self._size_scaler,
-                    font_size=self._vertical_button_height / 1.5,
-                    text=str(self._eval_expression(self._num_of_decks_per_generation))
+                    font_size=height_to_font_size(self._vertical_button_height),
+                    text=str(self._eval_expression(self._num_of_decks_per_generation)),
+                    on_text_update_hanlder=self._on_change_num_of_decks_per_generation
                 )
                 self._ui_num_of_decks_per_generation = c_text_input
                 self._vertical_button_count += 1
@@ -629,19 +670,20 @@ class CardDeck(CardPile):
                         center_y=self._mat_center[1] + self._mat_size[1] / 2 - (
                                 self._vertical_button_count * 2 + 1) / 2 * self._vertical_button_height,
                         size_scaler=self._size_scaler,
-                        font_size=self._vertical_button_height / 1.5,
+                        font_size=height_to_font_size(self._vertical_button_height),
                         text=str(key)
                     )
 
-                    c_text_input = ResizableUIInputBox(
+                    c_text_input = SyncedResizableUIInputBox(
                         width=self._vertical_button_width/2,
                         height=self._vertical_button_height,
                         center_x=self._mat_center[0] + self._mat_size[0] / 2 + self._vertical_button_width / 4 * 3,
                         center_y=self._mat_center[1] + self._mat_size[1] / 2 - (
                                 self._vertical_button_count * 2 + 1) / 2 * self._vertical_button_height,
                         size_scaler=self._size_scaler,
-                        font_size=self._vertical_button_height / 1.5,
-                        text=str(self._eval_expression(val))
+                        font_size=height_to_font_size(self._vertical_button_height),
+                        text=str(self._eval_expression(val)),
+                        on_text_update_hanlder=self._on_change_destination_piles_and_cards
                     )
                     self._ui_destination_piles_and_cards[key]=c_text_input
                     self._vertical_button_count+=1
