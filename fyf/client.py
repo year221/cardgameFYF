@@ -1,19 +1,15 @@
 """
 ZPY Card Game
 """
-import math
-import asyncio
 import threading
 import time
 import zmq
 from zmq import Context, Socket
-import random
 import arcade
 import os
 import argparse
 import utils
 import gamestate, clientelements
-from cardpile import CardPile
 from clientelements import Card, GameFlatButton,ResizableGameFlatButton,GameTextLabel
 from utils import *
 from arcade import gui
@@ -27,23 +23,19 @@ import yaml
 parser = argparse.ArgumentParser(description='Card client')
 
 parser.add_argument('-u', dest='server_ip', type=str, help='server ip', default='162.243.211.250')
-#parser.add_argument('-g', dest='game_config', type=str, help='game configuration file', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "../games/zhaopengyou.yaml"))
+parser.add_argument('-g', dest='game_file', type=str, help='path to yaml game file', default = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../games/zhaopengyou.yaml"))
 
-
-with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../games/zhaopengyou.yaml")) as file:
-    # The FullLoader parameter handles the conversion from YAML
-    # scalar values to Python the dictionary format
-    DEFAULT_GAME_CONFIG = yaml.load(file, Loader=yaml.SafeLoader) # , Loader=yaml.SafeLoader)
 
 # Network
 UPDATE_TICK = 30
 
 class CardGame(arcade.Window):
 
-    def __init__(self, *arg, **kargs):
+    def __init__(self, game_cfg, *arg, **kargs):
         super().__init__(*arg, **kargs)
         self.game_state = None
         self.event_buffer = []
+        self.game_cfg = game_cfg
 
     def update_game_state(self, gs_dict):
         """ update game state from gs_dict """
@@ -71,13 +63,14 @@ class CardGame(arcade.Window):
 
 class LoadingView(arcade.View):
     """ Screen loading the GUI   """
-    def __init__(self, player_id=None):
+    def __init__(self, game_config, player_id=None):
         super().__init__()
         if player_id is None:
             self.player_id = str(uuid.uuid4())
         else:
             self.player_id = player_id
-
+        self.game_config=game_config
+    
     @property
     def game_state(self):
         return self.window.game_state
@@ -91,7 +84,7 @@ class LoadingView(arcade.View):
             player_index = self.game_state.player_index_per_id[self.player_id]
             n_player = self.game_state.n_player
             game_view = GameView(player_id=self.player_id)
-            game_view.setup(game_config=DEFAULT_GAME_CONFIG, n_player=n_player, player_index=player_index)
+            game_view.setup(game_config=self.game_config, n_player=n_player, player_index=player_index)
             self.window.show_view(game_view)
 
 class ConnectView(arcade.View):
@@ -108,6 +101,10 @@ class ConnectView(arcade.View):
         self.label = None
 
     @property
+    def game_config(self):
+        return self.window.game_cfg
+
+    @property
     def game_state(self):
         return self.window.game_state
     @property
@@ -116,7 +113,10 @@ class ConnectView(arcade.View):
 
     def on_resize(self, width: float, height: float):
         pass
+
     def connect(self, text):
+        new_event = gamestate.EventConnect(type='GetGameState')
+        self.event_buffer.append(new_event)
         self.player_name = text
         new_event = gamestate.EventConnect(type='UpdatePlayerInfo',
                                           player_name = self.player_name,
@@ -145,38 +145,24 @@ class ConnectView(arcade.View):
                                           player_id = self.player_id
                                           )
         self.event_buffer.append(new_event)
+
     def on_update(self, deltatime):
+        game_config = self.game_config
         if self.game_state:
             if self.game_state.status=='Starting New Game':
                 if self.player_id in self.game_state.player_index_per_id:
                     player_index = self.game_state.player_index_per_id[self.player_id]
                     self.ui_manager.purge_ui_elements()
-                    loading_view = LoadingView(player_id = self.player_id)
+                    loading_view = LoadingView(game_config=game_config, player_id = self.player_id)
                     self.window.show_view(loading_view)
-                    # #print(self.game_state.player_index_per_id)
-                    # player_index = self.game_state.player_index_per_id[self.player_id]
-                    # player_name =  self.game_state.player_name_per_id[self.player_id]
-                    # n_player = self.game_state.n_player
-                    # self.ui_manager.purge_ui_elements()
-                    # game_view = GameView(player_id=self.player_id)
-                    # game_view.setup(game_config =DEFAULT_GAME_CONFIG,  n_player=n_player, player_index=player_index)
-                    # self.window.show_view(game_view)
 
             elif self.game_state.status == 'In Game':
                 if self.player_id in self.game_state.player_index_per_id:
-                    #player_index = self.game_state.player_index_per_id[self.player_id]
-                    #player_name =  self.game_state.player_name_per_id[self.player_id]
                     player_index = self.game_state.player_index_per_id[self.player_id]
                     if player_index <= -1:
                         self.ui_manager.purge_ui_elements()
-                        loading_view = LoadingView(player_id = self.player_id)
+                        loading_view = LoadingView(game_config=game_config, player_id = self.player_id)
                         self.window.show_view(loading_view)
-                    # if player_index <=-1: # we are an observer
-                    #     n_player = self.game_state.n_player
-                    #     self.ui_manager.purge_ui_elements()
-                    #     game_view = GameView(player_id=self.player_id)
-                    #     game_view.setup(n_player=n_player, player_index=player_index)
-                    #     self.window.show_view(game_view)
 
     def setup(self):
         self.ui_input_box = gui.UIInputBox(
@@ -228,14 +214,18 @@ class ConnectView(arcade.View):
     def on_draw(self):
         arcade.start_render()
         if self.game_state:
-            starting_y = 650
+            y_step = 25
+            starting_y = 350
             arcade.draw_text(f'Game Status: {self.game_state.status}', 200, starting_y, arcade.color.GOLD, 14)
-            starting_y -= 25
+            starting_y += y_step
             arcade.draw_text('players name | index', 200, starting_y, arcade.color.GOLD, 14)
             for player_id, player_name in self.game_state.player_name_per_id.items():
-                starting_y -= 25
+                starting_y += y_step
                 arcade.draw_text(f'{player_name} | {str(self.game_state.player_index_per_id[player_id]) if player_id in self.game_state.player_index_per_id else "not ready"}',
                                  200, starting_y, arcade.color.GOLD, 14)
+        else:
+            starting_y = 350
+            arcade.draw_text(f'Waiting for message from server', 200, starting_y, arcade.color.GOLD, 14)
 
 class GameView(arcade.View):
     """ Main Game View class. """
@@ -353,12 +343,9 @@ class GameView(arcade.View):
         self.pile_mat_list: arcade.SpriteList = arcade.SpriteList()
 
         # calculate pile id
-        starting_pile_id = 0
-        starting_pile_id = 0
         pile_tag_to_pile_id = {}
+        starting_pile_id = 0
         for pile_set in game_config['cardpiles']:
-
-
             if pile_set['piletype'] == 'PlayerPile':
                 pile_tag_to_pile_id.update({pile_set['pile_set_tag']: list(range(starting_pile_id, starting_pile_id+ self.n_player))})
                 starting_pile_id += self.n_player
@@ -431,9 +418,7 @@ class GameView(arcade.View):
                             enable_clear_button=pile_set['enable_clear_button'],
                             enable_recover_last_removed_cards=pile_set['enable_recover_last_removed_cards'],
                             enable_flip_all=pile_set['enable_flip_all'],
-                            #enable_title=pile_set['enable_title'],
                             title_property=pile_set['title'],
-                            #title=pile_set['default_title'],
                             update_event_handle=self.add_event,
                             other_properties={'player_index': player_index}
                         )
@@ -486,7 +471,6 @@ class GameView(arcade.View):
                     size_scaler=self._size_scaler,
                     per_deck_cards=pile_set['per_deck_cards'],
                     face_down=pile_set['face_down'],
-                    #initial_num_of_decks=pile_set['initial_num_of_decks'],
                     enable_clear_button=pile_set['enable_clear_button'],
                     enable_flip_all=pile_set['enable_flip_all'],
                     enable_generation=pile_set['enable_generation'],
@@ -536,7 +520,6 @@ class GameView(arcade.View):
                 self.window.show_view(connect_view)
                 return
             elif self.game_state.status=='New Game':
-
                 self.game_state.status='In Game'
                 self.clear_all_piles()
             held_cards_value = [w.value for w in self.held_cards]
@@ -549,9 +532,6 @@ class GameView(arcade.View):
                 else:
                     card_changed_removed = w.from_value_face(self.game_state.cards_in_pile[w.card_pile_id],
                                                              self.game_state.cards_status)
-                #if w.card_pile_id in self.game_state.cards_in_pile:
-                    # update card
-                #card_changed_removed = w.from_value_face(self.game_state.cards_in_pile[w.card_pile_id], self.game_state.cards_status)
 
                 # check whether hand-held cards affected
 
@@ -604,13 +584,11 @@ class GameView(arcade.View):
         self.card_on_press = None
         c_mats = arcade.get_sprites_at_point((x, y), self.pile_mat_list)
         if len(c_mats)>0:
-            #pile_index = c_mats[0].pile_position_in_card_pile_list
             c_card_pile =  c_mats[0].cardpile
 
             if button == arcade.MOUSE_BUTTON_RIGHT and (key_modifiers & arcade.key.MOD_ALT):
                 # with control, sort current piles
                 c_card_pile.resort_cards()
-                #self.card_pile_list[pile_index].resort_cards()
             elif button == arcade.MOUSE_BUTTON_RIGHT and (key_modifiers & arcade.key.MOD_CTRL):
                 self.clear_a_pile(c_card_pile)
             else:
@@ -625,9 +603,7 @@ class GameView(arcade.View):
 
                             if len(self.active_cards)>=1:
                                 # check if the pile being clicked on is the same as the active cards
-                                #current_pile_index = self.get_pile_index_for_card(self.card_on_press)
                                 current_pile = self.get_pile_for_card(self.card_on_press)
-                                #active_card_pile = self.get_pile_index_for_card(self.active_cards[0])
                                 active_card_pile = self.get_pile_for_card(self.active_cards[0])
 
                                 if current_pile != active_card_pile:
@@ -745,25 +721,12 @@ class GameView(arcade.View):
             self.game_state.update_from_event(new_event)
 
     def reset_player_and_game(self):
-        #print('reset')
         new_event = gamestate.EventConnect(type='ResetPlayerAndGame')
         self.event_buffer.append(new_event)
 
 
     def initiate_game_restart(self):
-        #n_decks= self.n_player
-        #n_residual_card =  self.n_player*2
-        #n_card_per_player = (n_decks * 54 - n_residual_card) // self.n_player
-        #n_residual_card = n_decks * 54 - n_card_per_player*self.n_player
-        #n_card_per_pile = {w+1: n_card_per_player for w in range(self.n_player)}
-        #n_card_per_pile[0]=n_residual_card
-        new_event = gamestate.Event(type='StartNewGame',
-                                   #player_index=self.self_player_index,
-                                   #n_player = self.n_player,
-                                   #n_pile = self.n_pile,
-                                   #n_card_per_pile = n_card_per_pile,
-                                   #face_down_pile = [0],
-                                   )
+        new_event = gamestate.EventConnect(type='StartNewGame')
         self.event_buffer.append(new_event)
 
 def thread_pusher(window: CardGame, server_ip:str):
@@ -778,7 +741,6 @@ def thread_pusher(window: CardGame, server_ip:str):
                 print(msg)
                 push_sock.send_json(msg)
             time.sleep(1 / UPDATE_TICK)
-
     finally:
         push_sock.close(1)
         ctx.destroy(linger=1)
@@ -801,13 +763,14 @@ def thread_receiver(window: CardGame, server_ip: str):
 def main(args):
     """ Main method """
 
-    window = CardGame(DEFAULT_GAME_CONFIG['default_screen_size'][0], DEFAULT_GAME_CONFIG['default_screen_size'][1], DEFAULT_GAME_CONFIG['name'], resizable=True)
-
-
+    with open(args.game_file) as file:
+        # The FullLoader parameter handles the conversion from YAML
+        # scalar values to Python the dictionary format
+        game_cfg = yaml.load(file, Loader=yaml.SafeLoader)  # , Loader=yaml.SafeLoader)
+    print(game_cfg)
+    window = CardGame(game_cfg=game_cfg, title='CARDGAME', resizable=True)
     connect_view = ConnectView()
     connect_view.setup()
-    #game_view = GameView(args.player_name if args.player_name!='' else f'PLAYER {args.playerindex}')
-    #game_view.setup(n_player=args.n_player, player_index=args.playerindex)
     window.show_view(connect_view)
     thread1 = threading.Thread(
         target=thread_pusher, args=(window, args.server_ip,), daemon=True)
