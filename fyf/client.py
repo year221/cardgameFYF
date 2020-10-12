@@ -541,8 +541,6 @@ class GameView(arcade.View):
                 self.clear_all_piles()
             held_cards_value = [w.value for w in self.held_cards]
             active_cards_value = [w.value for w in self.active_cards]
-
-            print(self.game_state.pile_property)
             # update piles
             for w in self.card_pile_list:
                 if w.card_pile_id not in self.game_state.cards_in_pile:
