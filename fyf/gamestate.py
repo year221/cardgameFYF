@@ -49,7 +49,6 @@ class GameState:
                 self.cards_in_pile.update({event.src_pile:[]})
             if event.dst_pile not in self.cards_in_pile.keys():
                 self.cards_in_pile.update({event.dst_pile:[]})
-            #if event.src_pile in self.cards_in_pile.keys() and event.dst_pile in self.cards_in_pile.keys():
 
             if not (set(event.cards) - set(self.cards_in_pile[event.src_pile])):
                 for card in event.cards:
@@ -57,12 +56,11 @@ class GameState:
                     self.cards_in_pile[event.dst_pile].append(card)
             self.status = 'In Game'
             return [copy.deepcopy(self)]
-        #print(self.cards_in_pile.keys())
+
         elif event.type == 'Add':
 
             if event.dst_pile not in self.cards_in_pile.keys():
                 self.cards_in_pile.update({event.dst_pile:[]})
-            #if event.dst_pile in self.cards_in_pile.keys():
             for card in event.cards:
                 if card not in self.cards_in_pile[event.dst_pile]:
                     self.cards_in_pile[event.dst_pile].append(card)
@@ -72,8 +70,6 @@ class GameState:
         elif event.type == 'Remove':
             if event.src_pile not in self.cards_in_pile.keys():
                 self.cards_in_pile.update({event.src_pile:[]})
-            #if event.src_pile in self.cards_in_pile.keys():
-
             if not (set(event.cards) - set(self.cards_in_pile[event.src_pile])):
                 for card in event.cards:
                     self.cards_in_pile[event.src_pile].remove(card)
@@ -88,7 +84,6 @@ class GameState:
             value_offset = math.ceil((max_value_card+1)/MAX_DECK_SIZE) * MAX_DECK_SIZE
             if event.dst_pile not in self.cards_in_pile.keys():
                 self.cards_in_pile.update({event.dst_pile:[]})
-            #if event.dst_pile in self.cards_in_pile.keys():
             for card in event.cards:
                 if card+value_offset not in self.cards_in_pile[event.dst_pile]:
                     self.cards_in_pile[event.dst_pile].append(card+value_offset)
@@ -97,23 +92,8 @@ class GameState:
             return [copy.deepcopy(self)]
 
         elif event.type == 'StartNewGame':
-            #self.n_player = event.n_player
-            #self.n_pile = event.n_pile
             self.cards_in_pile = {}
-            #self.cards_in_pile = {w: [] for w in range(self.n_pile)}
             self.cards_status = {}
-            #all_cards = list(range(sum(event.n_card_per_pile.values())))
-            #self.cards_status.update({w: 'U' for w in all_cards})
-            #random.seed(a=None)
-            #random.shuffle(all_cards)
-            #n_cards_distributed = 0
-
-            # for key, val in event.n_card_per_pile.items():
-            #     if key in event.face_down_pile:
-            #         self.cards_status.update({w:'D' for w in all_cards[n_cards_distributed: n_cards_distributed+val]})
-            #     self.cards_in_pile[key] = all_cards[n_cards_distributed: n_cards_distributed+val]
-            #     # send some card facedown
-            #     n_cards_distributed+=val
             self.status='New Game'
             return [copy.deepcopy(self)]
         elif event.type == 'UpdatePlayerInfo':
@@ -145,13 +125,6 @@ class GameState:
                     self.player_index_per_id.update({event.player_id:assigned_index})
 
                 if sorted(self.player_index_per_id.keys()) == sorted(self.player_name_per_id.keys()) and (any([w>=0 for key, w in self.player_index_per_id.items()])):
-                    # all player recognized. Start game
-                    # all_non_zero_ids = [w for key, w in self.player_index_per_id.items() if w>=0]
-                    # sorted_index = sorted(all_non_zero_ids)
-                    # self.player_index_per_id = {key:(sorted_index.index(val) if val>=0 else val) for key, val in self.player_index_per_id.items()}
-                    # self.player_name = {index_val: self.player_name_per_id[player_id] for player_id, index_val in self.player_index_per_id.items() if index_val >=0}
-                    # self.n_player = len(all_non_zero_ids)
-                    # self.status = 'Starting New Game'
                     self.start_new_game()
                 return [copy.deepcopy(self)]
             else:
@@ -163,12 +136,6 @@ class GameState:
                 if sorted(self.player_index_per_id.keys()) == sorted(self.player_name_per_id.keys()) and (any([w>=0 for key, w in self.player_index_per_id.items()])):
                     # all player recognized. Start game
                     self.start_new_game()
-                    # all_non_zero_ids = [w for key, w in self.player_index_per_id.items() if w>=0]
-                    # sorted_index = sorted(all_non_zero_ids)
-                    # self.player_index_per_id = {key:(sorted_index.index(val) if val>=0 else val) for key, val in self.player_index_per_id.items()}
-                    # self.player_name = {index_val: self.player_name_per_id[player_id] for player_id, index_val in self.player_index_per_id.items() if index_val >0}
-                    # self.n_player = len(all_non_zero_ids)
-                    # self.status = 'Starting New Game'
             return [copy.deepcopy(self)]
         elif event.type =='UIElementChange':
             if event.dst_pile not in self.pile_property:
