@@ -271,7 +271,8 @@ class SyncedResizableUIInputBox(ResizableUIInputBox):
 
     def _on_text_update(self):
         if self.text != self._previous_updated_text:
-            self._on_text_update_hanlder(self.text)
+            if self._on_text_update_hanlder is not None:
+                self._on_text_update_hanlder(self.text)
             self._previous_updated_text = self.text
 
     def on_unfocus(self):
