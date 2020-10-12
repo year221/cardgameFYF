@@ -387,7 +387,7 @@ class CardPile(arcade.SpriteList):
 
         if self.enable_flip_all:
             if self.flip_all_button is None:
-                self.flip_all_button = self._add_horizontal_buttons(self._recover_removed_card, 'FLIP ALL')
+                self.flip_all_button = self._add_horizontal_buttons(self._flip_all_card, 'FLIP ALL')
 
     def get_ui_elements(self):
         return self._ui_elements
