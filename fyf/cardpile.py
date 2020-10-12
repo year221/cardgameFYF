@@ -1,7 +1,7 @@
 """ card piles"""
 import math
 import arcade
-from clientelements import Card, ResizableGameTextLabel,ResizableGameFlatButton
+from clientelements import Card, ResizableGameTextLabel,ResizableGameFlatButton, ResizableUIInputBox
 from utils import *
 import gamestate
 from gamestate import MAX_DECK_SIZE
@@ -511,8 +511,7 @@ class CardDeck(CardPile):
         self._auto_distribution_button = None
         self.setup_vertical_ui_elements()
         self._simple_eval = SimpleEval()
-        print(self._auto_distribution_button)
-        print(self._enable_auto_distribution)
+
     def deal_cards(self):
         if 'pile_tag_to_pile_id' in self.other_properties:
             card_values = self.to_valuelist()
@@ -536,7 +535,6 @@ class CardDeck(CardPile):
             temp_str = x
             for key, val in self.other_properties['constants'].items():
                 temp_str = temp_str.replace(key, str(val))
-            print(temp_str)
             return self._simple_eval.eval(temp_str)
         else:
             return x
@@ -545,17 +543,9 @@ class CardDeck(CardPile):
 
         :return:
         """
-        #print(self.num_of_decks_per_generation)
+
         random.seed(a=None)
-        # if isinstance(self.num_of_decks_per_generation, str):
-        #     temp_str = self.num_of_decks_per_generation
-        #     for key, val in self.other_properties['constants'].items():
-        #         temp_str = temp_str.replace(key, str(val))
-        #     #print(temp_str)
-        #     n_deck_per_generation = ast.literal_eval(temp_str)
-        # else:
         n_deck_per_generation = self._eval_expression(self.num_of_decks_per_generation)
-        #print(n_deck_per_generation)
         new_cards = [j*MAX_DECK_SIZE + w for j in range(n_deck_per_generation) for w in self.per_deck_cards]
         face_value = 'D' if self.face_down else 'U'
         card_status = {w: face_value for w in new_cards}
@@ -567,37 +557,29 @@ class CardDeck(CardPile):
             cards_status= card_status
         )
         self._update_event_handle(new_event, local_fast_update=False)
-        #print()
+
 
     def setup_vertical_ui_elements(self):
         #num_vertical_button = 0
         if self._enable_generation:
             if self._generation_button is None:
                 self._generation_button = self._add_vertical_buttons(self.generate_cards, 'GENERATE')
-                # self._generation_button = ResizableGameFlatButton(
-                #     click_event=self.generate_cards,
-                #     width= self._vertical_button_width,
-                #     height=self._vertical_button_height,
-                #     center_x=self._mat_center[0] + self._mat_size[0] / 2 + self._vertical_button_width/2,
-                #     center_y=self._mat_center[1] + self._mat_size[1] / 2 - (num_vertical_button*2+1) /2 * self._vertical_button_height,
-                #     size_scaler=self._size_scaler,
-                #     font_size=self._vertical_button_height / 1.5,
-                #     text='GENERATE'
-                # )
-                # self._ui_elements.append(self._generation_button)
-                # num_vertical_button+=1
+
+
+
         if self._enable_auto_distribution:
             if self._auto_distribution_button is None:
+
+                c_text_input = ResizableUIInputBox(
+                    width=self._vertical_button_width,
+                    height=self._vertical_button_height,
+                    center_x=self._mat_center[0] + self._mat_size[0] / 2 + self._vertical_button_width / 2,
+                    center_y=self._mat_center[1] + self._mat_size[1] / 2 - (
+                            self._vertical_button_count * 2 + 1) / 2 * self._vertical_button_height,
+                    size_scaler=self._size_scaler,
+                    font_size=self._vertical_button_height / 1.5,
+                    text='a'
+                )
+                self._vertical_button_count+=1
+                self._ui_elements.append(c_text_input)
                 self._auto_distribution_button = self._add_vertical_buttons(self.deal_cards, 'DEAL')
-                # self._auto_distribution_button = ResizableGameFlatButton(
-                #     click_event=self.deal_cards,
-                #     width= self._vertical_button_width,
-                #     height=self._vertical_button_height,
-                #     center_x=self._mat_center[0] + self._mat_size[0] / 2 + self._vertical_button_width/2,
-                #     center_y=self._mat_center[1] + self._mat_size[1] / 2 - (num_vertical_button*2+1) /2 * self._vertical_button_height,
-                #     size_scaler=self._size_scaler,
-                #     font_size=self._vertical_button_height / 1.5,
-                #     text='DEAL'
-                # )
-                # self._ui_elements.append(self._auto_distribution_button)
-                # num_vertical_button+=1

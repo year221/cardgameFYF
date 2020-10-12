@@ -580,7 +580,6 @@ class GameView(arcade.View):
                         scores = utils.calculate_score(w.to_valuelist(), utils.Score_Rule[w._title_property['score_type']])
                         if w.title != str(scores):
                             if w.title.isdigit() or scores>0:
-                                print('update_score')
                                 w.title = str(scores)
 
     def on_draw(self):
