@@ -114,10 +114,10 @@ class ConnectView(arcade.View):
     def on_resize(self, width: float, height: float):
         pass
 
-    def connect(self, text):
+    def connect(self):
         new_event = gamestate.EventConnect(type='GetGameState')
         self.event_buffer.append(new_event)
-        self.player_name = text
+        self.player_name = str(self.ui_input_box.text)
         new_event = gamestate.EventConnect(type='UpdatePlayerInfo',
                                           player_name = self.player_name,
                                           player_id = self.player_id
@@ -128,23 +128,25 @@ class ConnectView(arcade.View):
         new_event = gamestate.EventConnect(type='GetGameState')
         self.event_buffer.append(new_event)
 
-    def send_ready(self, text):
-        new_event = gamestate.EventConnect(type='PlayerReady',
-                                          player_name = self.player_name,
-                                          player_id = self.player_id
-                                          )
-        self.event_buffer.append(new_event)
+    def send_ready(self):
+        if self.player_name is not None:
+            new_event = gamestate.EventConnect(type='PlayerReady',
+                                              player_name = self.player_name,
+                                              player_id = self.player_id
+                                              )
+            self.event_buffer.append(new_event)
 
     def reset_player_and_game(self):
         new_event = gamestate.EventConnect(type='ResetPlayerAndGame')
         self.event_buffer.append(new_event)
 
     def observe_a_game(self):
-        new_event = gamestate.EventConnect(type='Observe',
-                                          player_name = self.player_name,
-                                          player_id = self.player_id
-                                          )
-        self.event_buffer.append(new_event)
+        if self.player_name is not None:
+            new_event = gamestate.EventConnect(type='Observe',
+                                              player_name = self.player_name,
+                                              player_id = self.player_id
+                                              )
+            self.event_buffer.append(new_event)
 
     def on_update(self, deltatime):
         game_config = self.game_config
@@ -172,7 +174,8 @@ class ConnectView(arcade.View):
         )
         self.ui_manager.add_ui_element(self.ui_input_box )
         connect_button = GameFlatButton(
-            lambda : self.connect(self.ui_input_box.text),
+            self.connect,
+            #lambda : self.connect(self.ui_input_box.text),
             text='Connect',
             center_x=200,
             center_y=250,
@@ -181,7 +184,8 @@ class ConnectView(arcade.View):
         self.ui_manager.add_ui_element(connect_button)
 
         submit_button = GameFlatButton(
-            lambda : self.send_ready(self.ui_input_box.text),
+            self.send_ready,
+            #lambda : self.send_ready(self.ui_input_box.text),
             text='READY (Game starts when all players are ready',
             center_x=450,
             center_y=200,
