@@ -41,7 +41,8 @@ cardpiles:
     enable_sort_button: False
     enable_clear_button: False
     enable_recover_last_removed_cards: False
-    enable_flip_all: True
+    enable_flip_all: False
+    enable_face_up_all: True
     title:
       type: SCORE
       default: Your Private Pile

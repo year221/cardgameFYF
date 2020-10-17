@@ -128,7 +128,7 @@ class CardPile(arcade.SpriteList):
     def __init__(self, card_pile_id, mat_center, mat_size, mat_boundary, card_size, card_offset, mat_color, size_scaler=1,
                  sorting_rule=None,
                  auto_sort_setting=None,
-                 enable_sort_button=True, enable_clear_button=False, enable_recover_last_removed_cards=False, enable_flip_all=False,
+                 enable_sort_button=True, enable_clear_button=False, enable_recover_last_removed_cards=False, enable_flip_all=False, enable_face_up_all=False,
                  button_width=None, button_height=None,
                  vertical_button_width=None, vertical_button_height=None,
                  update_event_handle = None,
@@ -197,6 +197,11 @@ class CardPile(arcade.SpriteList):
         self.recover_button = None
         self.enable_flip_all = enable_flip_all
         self.flip_all_button = None
+        if enable_face_up_all:
+            self.enable_face_up_all = enable_face_up_all
+        else:
+            self.enable_face_up_all = False
+        self.face_up_all_button = None
         self._title_label = None
         if title_property is None:
             self._title_property = dict(type = Title_Type.NONE, default='')
@@ -283,6 +288,20 @@ class CardPile(arcade.SpriteList):
         )
         self._update_event_handle(new_event)
 
+    def _flip_all_card_face_up(self):
+        """ flip all card face up
+
+        :return:
+        """
+        card_update_dict = {}
+        for card in self:
+            card_update_dict[card.value]='U'
+            card.face = 'U'
+        new_event = gamestate.Event(
+            type='Flip',
+            cards_status=card_update_dict,
+        )
+        self._update_event_handle(new_event)
     def _recover_removed_card(self):
         """ recover previously cleared cards"""
         card_recovered = self._last_removed_card_values
@@ -389,6 +408,9 @@ class CardPile(arcade.SpriteList):
             if self.flip_all_button is None:
                 self.flip_all_button = self._add_horizontal_buttons(self._flip_all_card, 'FLIP ALL')
 
+        if self.enable_face_up_all:
+            if self.face_up_all_button is None:
+                self.face_up_all_button = self._add_horizontal_buttons(self._flip_all_card_face_up, 'FACE UP')
     def get_ui_elements(self):
         return self._ui_elements
 

@@ -385,6 +385,7 @@ class GameView(arcade.View):
                             enable_clear_button=pile_set['enable_clear_button'],
                             enable_recover_last_removed_cards=pile_set['enable_recover_last_removed_cards'],
                             enable_flip_all=pile_set['enable_flip_all'],
+                            enable_face_up_all=pile_set['enable_face_up_all'] if 'enable_face_up_all' in pile_set else False,
                             title_property=pile_set['title'],
                             update_event_handle=self.add_event,
                             other_properties={'player_index': player_index}
@@ -422,6 +423,7 @@ class GameView(arcade.View):
                             enable_clear_button=pile_set['enable_clear_button'],
                             enable_recover_last_removed_cards=pile_set['enable_recover_last_removed_cards'],
                             enable_flip_all=pile_set['enable_flip_all'],
+                            enable_face_up_all=pile_set['enable_face_up_all'] if 'enable_face_up_all' in pile_set else False,
                             title_property=pile_set['title'],
                             update_event_handle=self.add_event,
                             other_properties={'player_index': player_index}
@@ -451,6 +453,7 @@ class GameView(arcade.View):
                     enable_clear_button=pile_set['enable_clear_button'],
                     enable_recover_last_removed_cards=pile_set['enable_recover_last_removed_cards'],
                     enable_flip_all=pile_set['enable_flip_all'],
+                    enable_face_up_all=pile_set['enable_face_up_all'] if 'enable_face_up_all' in pile_set else False,
                     title_property=pile_set['title'],
                     update_event_handle=self.add_event
                 )
@@ -477,6 +480,7 @@ class GameView(arcade.View):
                     face_down=pile_set['face_down'],
                     enable_clear_button=pile_set['enable_clear_button'],
                     enable_flip_all=pile_set['enable_flip_all'],
+                    enable_face_up_all=pile_set['enable_face_up_all'] if 'enable_face_up_all' in pile_set else False,
                     enable_generation=pile_set['enable_generation'],
                     num_of_decks_per_generation=pile_set['num_of_decks_per_generation'],
                     enable_auto_distribution=pile_set['enable_auto_distribution'],
