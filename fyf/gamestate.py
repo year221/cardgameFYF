@@ -34,7 +34,7 @@ class GameState:
         self.player_index_per_id = {key: (sorted_index.index(val) if val >= 0 else val) for key, val in
                                     self.player_index_per_id.items()}
         self.player_name = {index_val: self.player_name_per_id[player_id] for player_id, index_val in
-                            self.player_index_per_id.items() if index_val > 0}
+                            self.player_index_per_id.items() if index_val >= 0}
         self.n_player = len(all_non_zero_ids)
         self.status = 'Starting New Game'
 
